@@ -1,0 +1,55 @@
+@startuml
+scale 1.2
+
+interface BeanFactory
+interface HierarchicalBeanFactory
+together {
+    interface ListableBeanFactory 
+    interface ConfigurableBeanFactory
+    interface AutowireCapableBeanFactory
+}
+
+HierarchicalBeanFactory -up-|> BeanFactory
+ListableBeanFactory -up-|> BeanFactory
+ConfigurableBeanFactory -up-|> HierarchicalBeanFactory
+AutowireCapableBeanFactory -up-|> BeanFactory
+
+abstract class AbstractBeanFactory 
+together {
+    interface ConfigurableListableBeanFactory
+    abstract class AbstractAutowireCapableBeanFactory
+}
+ConfigurableListableBeanFactory -up-|> ListableBeanFactory
+ConfigurableListableBeanFactory -up-|> AutowireCapableBeanFactory
+ConfigurableListableBeanFactory -up-|> ConfigurableBeanFactory
+
+AbstractAutowireCapableBeanFactory -up-|> AbstractBeanFactory
+AbstractAutowireCapableBeanFactory .up.|> AutowireCapableBeanFactory
+
+AbstractBeanFactory .up.|> ConfigurableBeanFactory
+
+class DefaultListableBeanFactory 
+DefaultListableBeanFactory -up-|> AbstractAutowireCapableBeanFactory
+DefaultListableBeanFactory .up.|> ConfigurableListableBeanFactory
+
+
+together {
+interface BeanDefinitionRegistry
+abstract class FactoryBeanRegistrySupport
+class DefaultSingletonBeanRegistry 
+}
+class SimpleAliasRegistry 
+interface SingletonBeanRegistry
+DefaultListableBeanFactory .up.|> BeanDefinitionRegistry
+
+FactoryBeanRegistrySupport -up-|> DefaultSingletonBeanRegistry
+DefaultSingletonBeanRegistry -up-|> SimpleAliasRegistry
+DefaultSingletonBeanRegistry .up.|> SingletonBeanRegistry
+AbstractBeanFactory -up-|>FactoryBeanRegistrySupport
+
+interface AliasRegistry
+SimpleAliasRegistry .up.|> AliasRegistry
+BeanDefinitionRegistry -up-|> AliasRegistry
+
+right footer <font size="15" color="red">ZhangZiSheng001</font>
+@enduml

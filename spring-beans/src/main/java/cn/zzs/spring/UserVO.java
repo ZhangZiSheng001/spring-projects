@@ -1,0 +1,37 @@
+package cn.zzs.spring;
+
+public class UserVO {
+    private String name;
+    
+    private Integer age;
+    
+    public UserVO(User user) {
+        super();
+        this.name = user.getName();
+        this.age = user.getAge();
+    }
+    
+    
+    
+    public String getName() {
+        return name;
+    }
+    
+    
+    
+    public void setName(String name) {
+        this.name = name;
+    }
+    
+    
+    
+    public Integer getAge() {
+        return age;
+    }
+    
+    
+    
+    public void setAge(Integer age) {
+        this.age = age;
+    }
+}

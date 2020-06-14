@@ -1,0 +1,25 @@
+@startuml
+scale 1.2
+
+together {
+    interface BeanDefinition 
+    abstract class AbstractBeanDefinition
+}
+
+AbstractBeanDefinition .up.|> BeanDefinition
+
+interface AnnotatedBeanDefinition extends BeanDefinition
+AnnotatedGenericBeanDefinition .up.|> AnnotatedBeanDefinition
+
+
+class ChildBeanDefinition 
+ChildBeanDefinition -up-|> AbstractBeanDefinition
+class RootBeanDefinition 
+RootBeanDefinition -up-|> AbstractBeanDefinition
+class GenericBeanDefinition 
+GenericBeanDefinition -up-|> AbstractBeanDefinition
+
+class AnnotatedGenericBeanDefinition extends GenericBeanDefinition
+
+right footer <font size="15" color="red">ZhangZiSheng001</font>
+@enduml
