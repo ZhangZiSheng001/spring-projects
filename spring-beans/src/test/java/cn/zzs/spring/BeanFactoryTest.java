@@ -163,7 +163,9 @@ public class BeanFactoryTest {
         assertEquals(userServiceFactoryBean.getObject(), beanFactory.getBean("userServiceAlias01"));
 
         // 通过&+FactoryBeanName的方式
-        assertEquals(userServiceFactoryBean, beanFactory.getBean("&UserServiceFactoryBean"));
+        assertEquals(userServiceFactoryBean, beanFactory.getBean("&userServiceFactoryBean"));
+        
+        System.err.println(beanFactory.getBean(UserServiceFactoryBean.class));;
     }
 
     @Test

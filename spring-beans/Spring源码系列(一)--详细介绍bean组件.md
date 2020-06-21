@@ -127,7 +127,7 @@ public class UserService implements IUserService {
 
 按照官方的说法， bean 是一个由 Spring IoC 容器实例化、组装和管理的对象。我认为，这种表述是错误的，通过`registerSingleton`方式注册的 bean，它就不是由 Spring IoC 容器实例化、组装，所以，更准确的表述应该是这样：
 
-**对象的实例，或者它的描述对象被注册到了 Spring IoC 容器，并且通过 Spring IoC 容器来获取得到的对象，就是 bean**。
+**某个类的对象、FactoryBean 对象、描述对象或 FactoryBean 描述对象，被注册到了 Spring IoC 容器，这时通过 Spring IoC 容器获取的这个类的对象就是 bean。**
 
 举个例子，使用了 Spring 的项目中， Controller 对象、Service 对象、DAO 对象等都属于 bean。
 
@@ -269,7 +269,7 @@ beanFactory 提供了多种方式来获取 bean 实例，如下。如果同时�
         assertEquals(userServiceFactoryBean.getObject(), beanFactory.getBean("userServiceAlias01"));
 
         // 通过&+FactoryBeanName的方式
-        assertEquals(userServiceFactoryBean, beanFactory.getBean("&UserServiceFactoryBean"));
+        assertEquals(userServiceFactoryBean, beanFactory.getBean("&userServiceFactoryBean"));
 ```
 
 
