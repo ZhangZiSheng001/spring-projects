@@ -59,6 +59,8 @@ public class BeanFactoryTest {
         // 注册Bean-- BeanDefinition方式
         BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
         beanFactory.registerBeanDefinition("userService", rootBeanDefinition);
+        rootBeanDefinition.getPropertyValues().add("name", "zzs001");
+        rootBeanDefinition.getPropertyValues().add("age", 18);
 
         // 注册Bean-- Bean实例方式
         beanFactory.registerSingleton("userService2", new UserService());
@@ -109,7 +111,7 @@ public class BeanFactoryTest {
 
         // 为BeanFactory设置比较器
         beanFactory.setDependencyComparator(new OrderComparator() {
-
+        
             @Override
             public Integer getPriority(Object obj) {
                 return obj.hashCode();
@@ -119,13 +121,11 @@ public class BeanFactoryTest {
         // 创建BeanDefinition对象
         BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(User.class).getBeanDefinition();
         // rootBeanDefinition.setPrimary(true); // 设置BeanDefinition对象为isPrimary
-        BeanDefinition rootBeanDefinition2 = BeanDefinitionBuilder.rootBeanDefinition(User.class).getBeanDefinition();
 
         // 注册Bean
         beanFactory.registerBeanDefinition("userRegisterBeanDefinition", rootBeanDefinition);
-        beanFactory.registerBeanDefinition("userRegisterBeanDefinition2", rootBeanDefinition2);
         beanFactory.registerSingleton("userRegisterSingleton", new User("zzs002", 19));
-        beanFactory.registerSingleton("userRegisterSingleton2", new User("zzs002", 18));
+        beanFactory.registerSingleton("userRegisterSingleton2", new User("zzs003", 18));
 
         // 获取Bean--通过BeanType
         User user = beanFactory.getBean(User.class);
@@ -215,12 +215,14 @@ public class BeanFactoryTest {
         // 创建BeanFactory对象
         DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
 
-        // 创建BeanDefinition对象
+        // 定义userService的beanDefinition
         AbstractBeanDefinition userServiceBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
-        // userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
-        userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_NAME);
-        userServiceBeanDefinition.setInitMethodName("init");
+        // 定义userDao的beanDefinition
         AbstractBeanDefinition userDaoBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserDao.class).getBeanDefinition();
+        // 给userService设置装配属性
+        userServiceBeanDefinition.getPropertyValues().add("userDao", userDaoBeanDefinition);
+        // userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+        // userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_NAME);
 
         // 注册Bean
         beanFactory.registerBeanDefinition("userService", userServiceBeanDefinition);
@@ -237,18 +239,18 @@ public class BeanFactoryTest {
 
         // 添加实例化处理器
         beanFactory.addBeanPostProcessor(new InstantiationAwareBeanPostProcessor() {
-
+            // 如果这里我们返回了对象，则beanFactory会将它作为bean直接返回，不再进行bean的实例化、属性装配和初始化等操作
             public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) throws BeansException {
                 if(UserService.class.equals(beanClass)) {
-                    System.err.println("实例化之前的处理。。 --> ");
+                    System.err.println("bean实例化之前的处理。。 --> ");
                 }
                 return null;
             }
 
-            @Override
+            // 这里通过返回的布尔值判断是否需要继续对bean进行属性装配和初始化等操作
             public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
                 if(UserService.class.isInstance(bean)) {
-                    System.err.println("实例化之后的处理。。 --> ");
+                    System.err.println("bean实例化之后的处理。。 --> ");
                 }
                 return true;
             }
@@ -257,20 +259,12 @@ public class BeanFactoryTest {
         // 添加装配处理器
         beanFactory.addBeanPostProcessor(new InstantiationAwareBeanPostProcessor() {
 
-            @Override
+            // 这里可以在属性装配前对参数列表进行调整
             public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
                 if(UserService.class.isInstance(bean)) {
-                    System.err.println("设置参数前对参数进行调整 --> ");
+                    System.err.println("属性装配前对参数列表进行调整 --> ");
                 }
                 return InstantiationAwareBeanPostProcessor.super.postProcessProperties(pvs, bean, beanName);
-            }
-
-            @Override
-            public PropertyValues postProcessPropertyValues(PropertyValues pvs, PropertyDescriptor[] pds, Object bean, String beanName) throws BeansException {
-                if(UserService.class.isInstance(bean)) {
-                    System.err.println("设置参数前对参数进行检查依赖关系 --> ");
-                }
-                return InstantiationAwareBeanPostProcessor.super.postProcessPropertyValues(pvs, pds, bean, beanName);
             }
 
         });
@@ -278,7 +272,7 @@ public class BeanFactoryTest {
         // 添加初始化处理器
         beanFactory.addBeanPostProcessor(new BeanPostProcessor() {
 
-            @Override
+            // 初始化前对bean进行改造
             public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
                 if(UserService.class.isInstance(bean)) {
                     System.err.println("初始化前，对Bean进行改造。。 --> ");
@@ -286,7 +280,7 @@ public class BeanFactoryTest {
                 return bean;
             }
 
-            @Override
+            // 初始化后对bean进行改造
             public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
                 if(UserService.class.isInstance(bean)) {
                     System.err.println("初始化后，对Bean进行改造。。 --> ");
@@ -294,11 +288,16 @@ public class BeanFactoryTest {
                 return bean;
             }
         });
-
+        // 定义userService的beanDefinition
         AbstractBeanDefinition userServiceBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
+        // 定义userDao的beanDefinition
         AbstractBeanDefinition userDaoBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserDao.class).getBeanDefinition();
+        // 给userService添加装配属性
+        userServiceBeanDefinition.getPropertyValues().add("userDao", userDaoBeanDefinition);
+        // 给userService设置初始化方法
         userServiceBeanDefinition.setInitMethodName("init");
-        userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+        
+        // 注册bean
         beanFactory.registerBeanDefinition("userService", userServiceBeanDefinition);
         beanFactory.registerBeanDefinition("userDao", userDaoBeanDefinition);
 

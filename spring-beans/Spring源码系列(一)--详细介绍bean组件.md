@@ -1,6 +1,6 @@
 # 简介
 
-spring-bean 组件是 IoC 的核心，我们可以通过`BeanFactory`来获取所需的对象，对象的实例化、属性装配和初始化都可以交给 spring 来管理。
+spring-bean 组件是 Spring IoC 的核心，我们可以使用它的 beanFactory 来获取所需的对象，对象的实例化、属性装配和初始化等都可以交给 spring 来管理。 
 
 针对 spring-bean 组件，我计划分成两篇博客来讲解。本文会详细介绍这个组件，包括以下内容。下一篇再具体分析它的源码。
 
@@ -78,7 +78,7 @@ Spring：5.2.6.RELEASE
 
 在 spring-bean 组件的设计中，这三个词完整、有序地描述了生成一个新对象的整个流程，是非常重要的理论基础。它们的具体含义如下：
 
-1. 实例化：使用构造方法创建出一个新对象。
+1. 实例化：创建出一个新对象。
 2. 属性装配：给对象的成员属性赋值。
 3. 初始化：调用对象的初始化方法。
 
@@ -135,14 +135,14 @@ public class UserService implements IUserService {
 
 ## 什么是beanFactory
 
-从客户端来看，一个完整的 beanFactory 工厂一般包含以下功能:
+从客户端来看，一个完整的 beanFactory 工厂包含以下基本功能:
 
 1. 注册别名。对应下图的`AliasRegistry`接口。
 2. 注册单例对象。对应下图的`SingletonBeanRegistry`接口。
 3. 注册`BeanDefinition`对象。对应下图的`BeanDefinitionRegistry`接口。
 4. 获取 bean。对应下图的`BeanFactory`接口。
 
-在 spring-bean 组件中，`DefaultListableBeanFactory`就是一个完整的 beanFactory 工厂，也可以说是一个  IoC 容器。接下来的例子将直接使用它来作为 beanFactory。
+在 spring-bean 组件中，`DefaultListableBeanFactory`就是一个完整的 beanFactory 工厂，也可以说是一个 IoC 容器。接下来的例子将直接使用它来作为 beanFactory。
 
 ![BeanFactoryUML_01](https://img2020.cnblogs.com/blog/1731892/202006/1731892-20200614181541484-2054058872.png)
 
@@ -193,7 +193,7 @@ spring-bean 组件提供了`BeanDefinitionBuilder`用于创建 beanDefinaition�
 
 ## 两种注册bean的方式
 
-beanFactory 除了支持注册 beanDefinition，还允许直接注册 bean 实例，如下。
+beanFactory 除了支持注册 beanDefinition，还允许直接注册 bean 实例，如下。和前者相比，后者的实例化、属性装配和初始化都没有交给 spring 管理。
 
 ```java
     @Test
@@ -217,6 +217,28 @@ beanFactory 除了支持注册 beanDefinition，还允许直接注册 bean 实�
 ```
 
 当然，这种方式仅支持单例 bean 的注册，多例的就没办法了。
+
+## 注册多例bean
+
+默认情况下，我们从 beanFactory 获取到的 bean 都是单例的，即每次 getBean 获取到的都是同一个对象，实际项目中，有时我们需要获取到多例的 bean，这个时候就可以通过设置 beanDefinition 的 scope 来处理。如下：
+
+```java
+    @Test
+    public void testScope() {
+        // 创建BeanFactory对象
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+        
+        // 注册Bean-- BeanDefinition方式
+        BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
+        rootBeanDefinition.setScope(BeanDefinition.SCOPE_PROTOTYPE);
+        beanFactory.registerBeanDefinition("userService", rootBeanDefinition);
+        
+        // 获取Bean--通过BeanType
+        IUserService userService1 = beanFactory.getBean(IUserService.class);
+        IUserService userService2 = beanFactory.getBean(IUserService.class);
+        assertNotEquals(userService1, userService2);
+    }
+```
 
 ## 多种获取bean的方式
 
@@ -246,11 +268,13 @@ beanFactory 提供了多种方式来获取 bean 实例，如下。如果同时�
     }
 ```
 
-另外，通过 beanName 获取 bean，这个 beanName 包含以下三种形式：
+## 不同形式的beanName
 
-1. beanName。 如果对应的 bean 是`FactoryBean`，不会返回`FactoryBean`的实例，而是会返回`FactoryBean.getObject`方法的返回结果。
-2. alias。通过 alias 对应的 beanName 来获取 Bean。
-3. '&' + factorybeanName。可以返回`FactoryBean`的实例，形式为：一个或多个& + factorybeanName。
+通过 name 获取 bean，这个 name 包含以下三种形式：
+
+1. beanName，即注册 bean 时用的 beanName。这是使用最多的形式，需要注意一点，如果 beanName 对应的 bean 是`FactoryBean`，并不会返回`FactoryBean`的实例，而是会返回`FactoryBean.getObject`方法的返回结果。
+2. alias，即我们通过`SimpleAliasRegistry.registerAlias(name, alias)`方法注册到 beanFactory 的别名。这时，需要将 name 解析为 alias 对应的 beanName 来获取 bean。
+3. '&' + factorybeanName，这时为了获取`FactoryBean`的一种特殊格式。
 
 ```java
         DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
@@ -285,11 +309,9 @@ beanFactory 提供了多种方式来获取 bean 实例，如下。如果同时�
         
         // 创建BeanDefinition对象
         BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(User.class).getBeanDefinition();
-        BeanDefinition rootBeanDefinition2 = BeanDefinitionBuilder.rootBeanDefinition(User.class).getBeanDefinition();
         
         // 注册Bean
         beanFactory.registerBeanDefinition("UserRegisterBeanDefinition", rootBeanDefinition);
-        beanFactory.registerBeanDefinition("UserRegisterBeanDefinition2", rootBeanDefinition2);
         beanFactory.registerSingleton("UserRegisterSingleton", new User("zzs002", 19));
         beanFactory.registerSingleton("UserRegisterSingleton2", new User("zzs002", 18));
         
@@ -303,69 +325,46 @@ beanFactory 提供了多种方式来获取 bean 实例，如下。如果同时�
 
 ![spring-bean-test01](https://img2020.cnblogs.com/blog/1731892/202006/1731892-20200614181638832-358781947.png)
 
+针对上面的这种问题，spring 的处理方法如下：
 
-针对上面的这种问题，可以采取两种解决方案：
+1. 检查是否存在唯一一个通过`registerBeanDefinition`且`isPrimary = true`的（存在多个会报错），存在的话将它作为匹配到的唯一 beanName；
+2. 通过我们注册的`OrderComparator`来确定优先值最小的作为唯一  beanName。注意，通过`registerSingleton`注册的和通过`registerBeanDefinition`注册的，比较的对象是不一样的，前者比较的对象是 bean 实例，后者比较的对象是 bean 类型，另外，这种方法最好不要存在相同优先级的 bean。
 
-1. 设置`BeanDefinition`对象的 isPrimary = true。这种方式不适用于 registerSingleton 的情况。
-2. 为 beanFactory 设置比较器。
-
-其中，1 方案要优先于 2 方案。
+所以，为了解决这种冲突，可以设置`BeanDefinition`对象的 isPrimary = true，或者为 beanFactory 设置`OrderComparator`，代码如下：
 
 ```java
     @Test
     public void testPrimary() {
         // 创建BeanFactory对象
         DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
-        
+
         // 为BeanFactory设置比较器
         beanFactory.setDependencyComparator(new OrderComparator() {
+
             @Override
             public Integer getPriority(Object obj) {
                 return obj.hashCode();
             }
         });
-        
+
         // 创建BeanDefinition对象
         BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(User.class).getBeanDefinition();
         // rootBeanDefinition.setPrimary(true); // 设置BeanDefinition对象为isPrimary
-        BeanDefinition rootBeanDefinition2 = BeanDefinitionBuilder.rootBeanDefinition(User.class).getBeanDefinition();
-        
+
         // 注册Bean
         beanFactory.registerBeanDefinition("userRegisterBeanDefinition", rootBeanDefinition);
-        beanFactory.registerBeanDefinition("userRegisterBeanDefinition2", rootBeanDefinition2);
         beanFactory.registerSingleton("userRegisterSingleton", new User("zzs002", 19));
-        beanFactory.registerSingleton("userRegisterSingleton2", new User("zzs002", 18));
-        
+        beanFactory.registerSingleton("userRegisterSingleton2", new User("zzs003", 18));
+
         // 获取Bean--通过BeanType
         User user = beanFactory.getBean(User.class);
         System.err.println(user);
     }
 ```
-## 获取多例对象
-
-默认情况下，我们从 beanFactory 获取到的 bean 都是单例的，即同一个对象，实际项目中，有时我们需要获取到多例的 bean，这个时候就可以通过设置 beanDefinition 的 scope 来处理。如下：
-
-```java
-    @Test
-    public void testScope() {
-        // 创建BeanFactory对象
-        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
-        
-        // 注册Bean-- BeanDefinition方式
-        BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
-        rootBeanDefinition.setScope(BeanDefinition.SCOPE_PROTOTYPE);
-        beanFactory.registerBeanDefinition("userService", rootBeanDefinition);
-        
-        // 获取Bean--通过BeanType
-        IUserService userService1 = beanFactory.getBean(IUserService.class);
-        IUserService userService2 = beanFactory.getBean(IUserService.class);
-        assertNotEquals(userService1, userService2);
-    }
-```
 
 ## 使用TypeConverter获取自定义类型的对象
 
-当我们同时使用 beanName + beanType 来获取 bean 时，如果获取到的 bean 不是指定的类型，这时，不会立即报错，beanFactory 会尝试使用`TypeConverter`来强制转换。而这个类型转换器我们可以自定义设置，如下。
+当我们使用 beanType 来获取 bean 时，如果获取到的 bean 不是指定的类型，这时，不会立即报错，beanFactory 会尝试使用我们注册的`TypeConverter`来强制转换。而这个类型转换器我们可以自定义设置，如下。
 
 ```java
     @Test
@@ -397,54 +396,36 @@ beanFactory 提供了多种方式来获取 bean 实例，如下。如果同时�
 
 ## 属性装配
 
-如果我想在`UserService`中注入`UserDao`，首先，需要在`UserService`中添加定义的 setter/getter 方法，如下：
-
-```java
-public class UserService implements IUserService {
-    
-    private UserDao userDao;
-
-    public void save(User user) {
-        System.err.println("Service save user：" + user);
-        userDao.save(user);
-    }
-
-    public UserDao getUserDao() {
-        return userDao;
-    }
-
-    public void setUserDao(UserDao userDao) {
-        this.userDao = userDao;
-    }
-    
-}
-```
-
-在注册 bean 时需要注意，`UserDao`的 bean 也需要注册，而且需要更改 userServiceBeanDefinition 的 autowireType 为按 beanType 注入或按 beanName 注入。
+beanFactory 在进行属性装配时，会读取 beanDefinition 对象中的`PropertyValues`中的propertyName=propertyValue，所以，我们想要对 bean 注入什么参数，只要在定义 beanDefinition 时指定就行。
 
 ```java
     @Test
     public void testPopulate() {
         // 创建BeanFactory对象
         DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
-        
-        // 创建BeanDefinition对象
+
+        // 定义userService的beanDefinition
         AbstractBeanDefinition userServiceBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
-        // userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
-        userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_NAME);
+        // 定义userDao的beanDefinition
         AbstractBeanDefinition userDaoBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserDao.class).getBeanDefinition();
-        
+        // 给userService设置装配属性
+        userServiceBeanDefinition.getPropertyValues().add("userDao", userDaoBeanDefinition);
+        // userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+        // userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_NAME);
+
         // 注册Bean
         beanFactory.registerBeanDefinition("userService", userServiceBeanDefinition);
         beanFactory.registerBeanDefinition("userDao", userDaoBeanDefinition);
-        
+
         // 获取Bean
         IUserService userService = (IUserService)beanFactory.getBean("userService");
         userService.save(null);
     }
 ```
 
-运行以上方法，属性装配正常。
+运行以上方法，发现 userDao 对象被成功注入到了 userService 对象中！
+
+这里补充一点，beanFactory 除了通过 beanDefinition 中的`PropertyValues`获取 propertyName=propertyValue，还可以读取 bean 中的属性来自动定义 propertyName=propertyValue，只要设置 beanDefinition 的 autowireMode 就可以了。
 
 ## bean 实例化、属性装配和初始化的处理器
 
@@ -459,40 +440,32 @@ public class UserService implements IUserService {
 
         // 添加实例化处理器
         beanFactory.addBeanPostProcessor(new InstantiationAwareBeanPostProcessor() {
-			
+            // 如果这里我们返回了对象，则beanFactory会将它作为bean直接返回，不再进行bean的实例化、属性装配和初始化等操作
             public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) throws BeansException {
                 if(UserService.class.equals(beanClass)) {
-                    System.err.println("实例化之前的处理。。 --> ");
+                    System.err.println("bean实例化之前的处理。。 --> ");
                 }
                 return null;
             }
 
-            @Override
+            // 这里通过返回的布尔值判断是否需要继续对bean进行属性装配和初始化等操作
             public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
                 if(UserService.class.isInstance(bean)) {
-                    System.err.println("实例化之后的处理。。 --> ");
+                    System.err.println("bean实例化之后的处理。。 --> ");
                 }
                 return true;
             }
         });
 
-        // 添加属性装配处理器
+        // 添加装配处理器
         beanFactory.addBeanPostProcessor(new InstantiationAwareBeanPostProcessor() {
 
-            @Override
+            // 这里可以在属性装配前对参数列表进行调整
             public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
                 if(UserService.class.isInstance(bean)) {
-                    System.err.println("设置参数前对参数进行调整 --> ");
+                    System.err.println("属性装配前对参数列表进行调整 --> ");
                 }
                 return InstantiationAwareBeanPostProcessor.super.postProcessProperties(pvs, bean, beanName);
-            }
-
-            @Override
-            public PropertyValues postProcessPropertyValues(PropertyValues pvs, PropertyDescriptor[] pds, Object bean, String beanName) throws BeansException {
-                if(UserService.class.isInstance(bean)) {
-                    System.err.println("设置参数前对参数进行检查依赖关系 --> ");
-                }
-                return InstantiationAwareBeanPostProcessor.super.postProcessPropertyValues(pvs, pds, bean, beanName);
             }
 
         });
@@ -500,7 +473,7 @@ public class UserService implements IUserService {
         // 添加初始化处理器
         beanFactory.addBeanPostProcessor(new BeanPostProcessor() {
 
-            @Override
+            // 初始化前对bean进行改造
             public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
                 if(UserService.class.isInstance(bean)) {
                     System.err.println("初始化前，对Bean进行改造。。 --> ");
@@ -508,7 +481,7 @@ public class UserService implements IUserService {
                 return bean;
             }
 
-            @Override
+            // 初始化后对bean进行改造
             public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
                 if(UserService.class.isInstance(bean)) {
                     System.err.println("初始化后，对Bean进行改造。。 --> ");
@@ -516,11 +489,16 @@ public class UserService implements IUserService {
                 return bean;
             }
         });
-
+        // 定义userService的beanDefinition
         AbstractBeanDefinition userServiceBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
+        // 定义userDao的beanDefinition
         AbstractBeanDefinition userDaoBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserDao.class).getBeanDefinition();
+        // 给userService添加装配属性
+        userServiceBeanDefinition.getPropertyValues().add("userDao", userDaoBeanDefinition);
+        // 给userService设置初始化方法
         userServiceBeanDefinition.setInitMethodName("init");
-        userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+        
+        // 注册bean
         beanFactory.registerBeanDefinition("userService", userServiceBeanDefinition);
         beanFactory.registerBeanDefinition("userDao", userDaoBeanDefinition);
 
@@ -531,9 +509,7 @@ public class UserService implements IUserService {
 
 运行以上方法，控制台打印出了整个处理流程。实际开发中，我们可以通过设置处理器来改变改造生成的 bean 。
 
-<img src="https://img2020.cnblogs.com/blog/1731892/202006/1731892-20200614181703510-1058479376.png" alt="spring-bean-test03" style="zoom:80%;" />
-
-
+<img src="https://img2020.cnblogs.com/blog/1731892/202006/1731892-20200626201418174-124423364.png" alt="spring-bean-test03" style="zoom:80%;" />
 
 以上，基本介绍完 spring-bean 组件的使用，下篇博客再分析源码，如果在分析过程中发现有其他特性，也会在这篇博客的基础上扩展。
 
