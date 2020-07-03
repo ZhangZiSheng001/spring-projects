@@ -34,11 +34,6 @@ Spring：5.2.6.RELEASE
         <!-- spring -->
         <dependency>
             <groupId>org.springframework</groupId>
-            <artifactId>spring-core</artifactId>
-            <version>${spring.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
             <artifactId>spring-beans</artifactId>
             <version>${spring.version}</version>
         </dependency>
@@ -56,12 +51,6 @@ Spring：5.2.6.RELEASE
             <version>1.7.28</version>
             <type>jar</type>
             <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-core</artifactId>
-            <version>1.2.3</version>
-            <type>jar</type>
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>
