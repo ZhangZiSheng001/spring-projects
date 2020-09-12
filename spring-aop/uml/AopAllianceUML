@@ -1,0 +1,43 @@
+@startuml
+scale 1.2
+
+together {
+    interface Advice
+    interface Interceptor
+    interface ConstructorInterceptor{
+        Object construct(ConstructorInvocation invocation);
+    }
+    interface MethodInterceptor{
+        Object invoke(MethodInvocation invocation);
+    }
+    
+}
+together {
+    interface Joinpoint {
+        Object proceed();
+        Object getThis();
+        AccessibleObject getStaticPart();
+    }
+    interface Invocation {
+        Object[] getArguments();
+    }
+    interface ConstructorInvocation{
+        Constructor<?> getConstructor();
+    }
+    interface MethodInvocation{
+        Constructor<?> getConstructor();
+    }
+}
+
+Interceptor -up-|> Advice
+Invocation -up-|> Joinpoint
+ConstructorInterceptor -up-|> Interceptor
+MethodInterceptor -up-|> Interceptor
+ConstructorInvocation -up-|> Invocation
+MethodInvocation -up-|> Invocation
+
+
+
+
+right footer <font size="15" color="red">ZhangZiSheng001</font>
+@enduml

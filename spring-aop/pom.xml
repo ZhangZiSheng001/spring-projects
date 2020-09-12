@@ -2,10 +2,10 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>cn.zzs.spring</groupId>
-    <artifactId>spring-beans-demo</artifactId>
+    <artifactId>spring-aop-demo</artifactId>
     <packaging>jar</packaging>
     <version>1.0.0</version>
-    <name>spring-beans-demo</name>
+    <name>spring-aop-demo</name>
     <url>http://maven.apache.org</url>
 
 
@@ -15,11 +15,23 @@
     
     <dependencies>
         <!-- spring -->
-        <dependency>
+       <dependency>
             <groupId>org.springframework</groupId>
-            <artifactId>spring-beans</artifactId>
+            <artifactId>spring-aop</artifactId>
             <version>${spring.version}</version>
         </dependency>
+        <!-- aspectjweaver -->
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+            <version>1.9.6</version>
+            <!-- <scope>runtime</scope> -->
+        </dependency>
+        <!-- <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjrt</artifactId>
+            <version>1.9.6</version>
+        </dependency> -->
         <!-- junit -->
         <dependency>
             <groupId>junit</groupId>
