@@ -8,6 +8,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aop.framework.ProxyFactory;
+import org.springframework.cglib.core.DebuggingClassWriter;
 
 /**
  * 测试ProxyFactory
@@ -22,7 +23,7 @@ public class ProxyFactoryTest {
     public void testCglibProxy() {
         
         // 设置输出代理类到指定路径
-        //System.setProperty(DebuggingClassWriter.DEBUG_LOCATION_PROPERTY, "img");
+        // System.setProperty(DebuggingClassWriter.DEBUG_LOCATION_PROPERTY, "img");
         
         ProxyFactory proxyFactory = new ProxyFactory();
         

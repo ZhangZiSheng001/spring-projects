@@ -1,29 +1,39 @@
 @startuml
 scale 1.2
 
-class ProxyFactory
-class AspectJProxyFactory
-class ProxyFactoryBean
-class ProxyCreatorSupport
-class AdvisedSupport
-class ProxyConfig
-interface Advised
+together {
+    class ProxyConfig
+    interface Advised
+    class AdvisedSupport
+    interface TargetSource
+    interface Advisor 
+    class ProxyCreatorSupport
+    class ProxyFactory
+    class AspectJProxyFactory
+    class ProxyFactoryBean
+}
 
+AdvisedSupport -up-|> ProxyConfig
+AdvisedSupport .up.|> Advised
+ProxyCreatorSupport -up-|> AdvisedSupport
+TargetSource "1" -left-o "1" AdvisedSupport
+Advisor "n" -right-o "1" AdvisedSupport
 ProxyFactory -up-|> ProxyCreatorSupport
 AspectJProxyFactory -up-|> ProxyCreatorSupport
 ProxyFactoryBean -up-|> ProxyCreatorSupport
-ProxyCreatorSupport -up-|> AdvisedSupport
-AdvisedSupport -up-|> ProxyConfig
-AdvisedSupport .up.|> Advised
 
-interface AopProxyFactory
-AopProxyFactory "1" o-left-o "1" ProxyCreatorSupport
-
-interface TargetSource
-TargetSource "1" -left-o "1" AdvisedSupport
-
-interface Advisor 
-Advisor "n" -right-o "1" AdvisedSupport
+together {
+    interface AopProxyFactory
+    interface AopProxy
+    class CglibAopProxy
+    class ObjenesisCglibAopProxy
+    class JdkDynamicAopProxy
+}
+AopProxyFactory "1" o-right-o "1" ProxyCreatorSupport
+AopProxyFactory .right.> AopProxy
+CglibAopProxy .up.|> AopProxy
+ObjenesisCglibAopProxy -up-|> CglibAopProxy
+JdkDynamicAopProxy .up.|> AopProxy
 
 
 right footer <font size="15" color="red">ZhangZiSheng001</font>
