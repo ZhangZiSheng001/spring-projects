@@ -1,0 +1,34 @@
+@startuml
+scale 1.2
+
+interface Advice
+interface AfterAdvice
+interface BeforeAdvice
+interface Interceptor
+interface DynamicIntroductionAdvice
+
+AfterAdvice -up-|> Advice
+BeforeAdvice -up-|> Advice
+Interceptor -up-|> Advice
+DynamicIntroductionAdvice -up-|> Advice
+
+interface ConstructorInterceptor
+interface MethodInterceptor
+ConstructorInterceptor -up-|> Interceptor
+MethodInterceptor -up-|> Interceptor
+
+
+interface AfterReturningAdvice
+interface ThrowsAdvice
+AfterReturningAdvice -up-|> AfterAdvice
+ThrowsAdvice -up-|> AfterAdvice
+
+interface MethodBeforeAdvice
+MethodBeforeAdvice -up-|> BeforeAdvice
+
+interface IntroductionInterceptor
+IntroductionInterceptor -up-|> MethodInterceptor
+IntroductionInterceptor -up-|> DynamicIntroductionAdvice
+
+right footer <font size="15" color="red">ZhangZiSheng001</font>
+@enduml

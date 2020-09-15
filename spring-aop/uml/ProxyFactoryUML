@@ -7,6 +7,7 @@ together {
     class AdvisedSupport
     interface TargetSource
     interface Advisor 
+    interface Advice
     class ProxyCreatorSupport
     class ProxyFactory
     class AspectJProxyFactory
@@ -18,6 +19,7 @@ AdvisedSupport .up.|> Advised
 ProxyCreatorSupport -up-|> AdvisedSupport
 TargetSource "1" -left-o "1" AdvisedSupport
 Advisor "n" -right-o "1" AdvisedSupport
+Advice "1" -right-o "1" Advisor
 ProxyFactory -up-|> ProxyCreatorSupport
 AspectJProxyFactory -up-|> ProxyCreatorSupport
 ProxyFactoryBean -up-|> ProxyCreatorSupport
