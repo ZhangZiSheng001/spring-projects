@@ -1,0 +1,22 @@
+@startuml
+scale 1.2
+
+actor UserController
+
+UserController -> UserServiceEnhancerBySpringCGLIB:save
+note left: 1.调用代理方法
+UserServiceEnhancerBySpringCGLIB -> DynamicAdvisedInterceptor:intercept
+note left: 调用MethodInterceptor方法
+DynamicAdvisedInterceptor -> AdvisedSupport:getInterceptorsAndDynamicInterceptionAdvice
+note left: 2.通过Advisor List获取Advice chain
+AdvisedSupport -> DynamicAdvisedInterceptor
+DynamicAdvisedInterceptor -> CglibMethodInvocation:new
+note left: 3.创建save方法对应的Joinpoint对象
+DynamicAdvisedInterceptor -> CglibMethodInvocation:proceed
+note left: 4.执行Advice chain
+CglibMethodInvocation -> DynamicAdvisedInterceptor
+DynamicAdvisedInterceptor -> UserServiceEnhancerBySpringCGLIB
+UserServiceEnhancerBySpringCGLIB -> UserController
+
+right footer <font size="15" color="red">ZhangZiSheng001</font>
+@enduml

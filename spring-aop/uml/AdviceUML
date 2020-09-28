@@ -2,31 +2,31 @@
 scale 1.2
 
 interface Advice
-interface AfterAdvice
-interface BeforeAdvice
-interface Interceptor
-interface DynamicIntroductionAdvice
 
+together {
+    interface AfterAdvice
+    interface BeforeAdvice
+    interface AfterReturningAdvice
+    interface ThrowsAdvice
+    interface MethodBeforeAdvice
+}
 AfterAdvice -up-|> Advice
 BeforeAdvice -up-|> Advice
-Interceptor -up-|> Advice
-DynamicIntroductionAdvice -up-|> Advice
-
-interface ConstructorInterceptor
-interface MethodInterceptor
-ConstructorInterceptor -up-|> Interceptor
-MethodInterceptor -up-|> Interceptor
-
-
-interface AfterReturningAdvice
-interface ThrowsAdvice
 AfterReturningAdvice -up-|> AfterAdvice
 ThrowsAdvice -up-|> AfterAdvice
-
-interface MethodBeforeAdvice
 MethodBeforeAdvice -up-|> BeforeAdvice
 
-interface IntroductionInterceptor
+together {
+    interface Interceptor
+    interface DynamicIntroductionAdvice
+    interface ConstructorInterceptor
+    interface MethodInterceptor
+    interface IntroductionInterceptor
+}
+
+Interceptor -up-|> Advice
+ConstructorInterceptor -up-|> Interceptor
+MethodInterceptor -up-|> Interceptor
 IntroductionInterceptor -up-|> MethodInterceptor
 IntroductionInterceptor -up-|> DynamicIntroductionAdvice
 

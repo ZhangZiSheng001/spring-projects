@@ -1,17 +1,5 @@
 @startuml
 scale 1.2
-
-together {
-    interface Advice
-    interface Interceptor
-    interface ConstructorInterceptor{
-        Object construct(ConstructorInvocation invocation);
-    }
-    interface MethodInterceptor{
-        Object invoke(MethodInvocation invocation);
-    }
-    
-}
 together {
     interface Joinpoint {
         Object proceed();
@@ -28,6 +16,18 @@ together {
         Constructor<?> getConstructor();
     }
 }
+together {
+    interface Advice
+    interface Interceptor
+    interface ConstructorInterceptor{
+        Object construct(ConstructorInvocation invocation);
+    }
+    interface MethodInterceptor{
+        Object invoke(MethodInvocation invocation);
+    }
+    
+}
+
 
 Interceptor -up-|> Advice
 Invocation -up-|> Joinpoint

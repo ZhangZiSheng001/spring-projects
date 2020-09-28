@@ -2,7 +2,7 @@
 
 前面已经讲完 spring-bean( 详见[Spring](https://www.cnblogs.com/ZhangZiSheng001/category/1776792.html) )，这篇博客开始攻克 Spring 的另一个重要模块--spring-aop。
 
-spring-aop 可以实现动态代理（底层是使用 JDK 动态代理或 cglib 来生成代理类），在项目中，一般被用来实现日志、权限、事务等的统一管理。
+spring-aop 用于生成动态代理类（底层是使用 JDK 动态代理或 cglib 来生成代理类），搭配 spring-bean 一起使用，可以使 AOP 更加解耦、方便。在实际项目中，spring-aop 被广泛用来实现日志、权限、事务、异常等的统一管理。
 
 我将通过两篇博客来详细介绍 spring-aop 的使用、源码等。这是第一篇博客，主要介绍 spring-aop 的组件、架构、使用等。
 
@@ -16,14 +16,13 @@ JDK：8u231
 
 Spring：5.2.6.RELEASE
 
-
 # 几个重要的组件
 
-说到 spring-aop，我们经常会使用到**`Pointcut`、`Joinpoint`、`Advice`、`Aspect`**等等基础组件，它们都是抽象出来的“标准”，有的来自 aopalliance，有的来自 AspectJ，也有的是 spring-aop 原创。
+说到 spring-aop，我们经常会提到**`Pointcut`、`Joinpoint`、`Advice`、`Aspect`**等等概念，它们都是抽象出来的“标准”，有的来自 aopalliance，有的来自 AspectJ，也有的是 spring-aop 原创。
 
-**想要学好 spring-aop，必须理解好这几个基础组件**。但是，理解它们非常难，一个原因是网上能讲清楚的不多，第二个原因是这些组件本身抽象得不够直观（spring 官网承认了这一点）。
+它们是构成 spring-aop “设计图”的基础，理解它们非常难，一个原因是网上能讲清楚的不多，第二个原因是这些组件本身抽象得不够直观（spring 官网承认了这一点）。
 
-## AOP联盟的组件--Joinpoint、Advice
+## 对Joinpoint做Advice
 
 在  spring-aop 的包中内嵌了 aopalliance 的包（aopalliance 就是一个制定 AOP 标准的联盟、组织），这个包是 AOP 联盟提供的一套“标准”，提供了 AOP 一些通用的组件，包的结构大致如下。
 
@@ -44,33 +43,59 @@ Spring：5.2.6.RELEASE
                 MethodInvocation.class
 ```
 
-完整的 aopalliance 包，除了 aop 和 intercept，还包括了 instrument 和 reflect，后面这两个部分 spring-aop 没有引入，这里就不说了。
+使用 UML 表示以上类的关系，如下。可以看到，这主要包含两个部分：`Joinpoint`和`Advice`（这是 AOP 最核心的两个概念）。完整的 aopalliance 包，除了 aop 和 intercept，还包括了 instrument 和 reflect，后面这两个部分 spring-aop 没有引入，这里就不说了。
 
-使用 UML 表示以上类的关系，如下。可以看到，这主要包含两个部分：`Joinpoint`和`Advice`。
+![AopAopallianceUML](https://img2020.cnblogs.com/blog/1731892/202009/1731892-20200928154513960-770091995.png)
 
-<img src="https://img2020.cnblogs.com/blog/1731892/202009/1731892-20200915090605295-325173928.png" alt="AopAopallianceUML"  />
+1. **Joinpoint**
 
-1. **Joinpoint**：**一个事件，包括调用某个方法（构造方法或成员方法）、操作某个成员属性等**。
+**`Joinpoint`表示调用某个方法（构造方法或成员方法），或者操作某个成员属性的事件**。
 
-例如，我调用了`user.study()` 方法，这个事件本身就属于一个`Joinpoint`。`Joinpoint`是一个“动态”的概念，通过它可以获取这个事件的静态信息，例如当前事件对应的`AccessibleObject`（`AccessibleObject`是`Field`、`Method`、`Constructor`等的超类）。spring-aop 主要使用到`Joinpoint`的子接口`MethodInvocation`。
+例如，我调用了`user.save()` 方法，这个事件就属于一个`Joinpoint`。`Joinpoint`是一个“动态”的概念，`Field`、`Method`、或`Constructor`等对象是它的静态部分。
 
-2. **Advice**：**对`Joinpoint`执行的某些操作**。
+如上图所示，**`Joinpoint`是`Advice`操作的对象**。
 
-例如，JDK 动态代理使用的`InvocationHandler`、cglib 使用的`MethodInterceptor`，在抽象概念上可以算是`Advice`（即使它们没有继承`Advice`）。spring-aop 主要使用到`Advice`的子接口`MethodInterceptor`。
+在 spring-aop 中，主要使用`Joinpoint`的子接口--`MethodInvocation`，JDK 动态代理使用的`MethodInvocation`实现类为`ReflectiveMethodInvocation`，cglib 使用的是`MethodInvocation`实现类为`CglibMethodInvocation`。
 
-3. **Joinpoint 和 Advice 的关系**：
+2. **Advice**
 
-`Joinpoint`是`Advice`操作的对象，一个`Advice`可以操作多个`Joinpoint`，一个`Joinpoint`也可以被多个`Advice`操作。**在 spring-aop 里，`Joinpoint`对象会持有一条`Advice`链，调用`Joinpoint.proceed()`将逐一执行其中的`Advice`（需要判断是否执行），执行完`Advice`链`Advice`链，将最终执行被代理对象的方法**。
+**对`Joinpoint`执行的某些操作**。
 
-## AspectJ 的组件--Pointcut、Aspect
+例如，JDK 动态代理使用的`InvocationHandler`、cglib 使用的`MethodInterceptor`，在抽象概念上可以算是`Advice`（即使它们没有继承`Advice`）。
 
-AspectJ 是一个非常非常强大的 AOP 工具，可以实现编译期织入、编译后织入和类加载时织入，并且提供了一套 AspectJ 语法（spring-aop 支持这套语法，但要额外引入 aspectjweaver 包）。spring-aop 使用到了 AspectJ 的两个组件，`Pointcut`和`Aspect`。
+在 spring-aop 中，主要使用`Advice`的子接口--`MethodInterceptor`。
 
-其中，**`Pointcut`可以看成一个过滤器，它可以用来判断当前`Advice`是否拦截指定`Joinpoint`**，如下图所示。注意，不同的`Advice`也可以共用一个`Pointcut`。
+为了更好地理解这两个概念，我再举一个例子：当我们对用户进行增删改查前，进行权限校验。其中，调用用户的新增方法的事件就是一个的`Joinpoint`，权限校验就是一个`Advice`，即对`Joinpoint`做`Advice`。
 
-<img src="https://img2020.cnblogs.com/blog/1731892/202009/1731892-20200915090626002-1373379548.png" alt="Pointcut_01" style="zoom:80%;" />
+**在 spring-aop 中，`Joinpoint`对象持有了一条`Advice chain`，调用`Joinpoint`的`proceed()`方法将采用责任链的形式依次执行**（注意，`Advice`的执行可以互相嵌套，不是单纯的先后顺序）。
 
-`Aspect`这个没什么特别，就是一组`Pointcut`+`Advice`的集合。下面这段代码中，有两个`Advice`，分别为`printRequest`和`printResponse`，它们共享同一个`Pointcut`，而这个类里的`Pointcut`+`Advice`可以算是一个`Aspect`。
+## 其他的几个概念
+
+在 spring-aop 中，还会使用到其他的概念，例如`Advice Filter`、`Advisor`、`Pointcut`、`Aspect`等。
+
+1. **`Advice Filter`**
+
+**`Advice Filter`一般和`Advice`绑定，它用来告诉我们，`Advice`是否作用于指定的`Joinpoint`**，如果 true，则将`Advice`加入到当前`Joinpoint`的`Advice chain`，如果为 false，则不加入。
+
+在 spring-aop 中，常用的`Advice Filter`包括`ClassFilter`和`MethodMatcher`，前者过滤的是类，后者过滤的是方法。
+
+2. **`Pointcut`**
+
+**`Pointcut`是 AspectJ 的组件，它一种 `Advice Filter`**。
+
+在 spring-aop 中，`Pointcut`=`ClassFilter`+`MethodMatcher`。
+
+3. **`Advisor`**
+
+`Advisor`是 spring-aop 原创的组件，**一个 Advisor = 一个 Advice Filter + 一个 Advice**。
+
+在 spring-aop 中，主要有两种`Advisor`：`IntroductionAdvisor`和`PointcutAdvisor`。前者为`ClassFilter`+`Advice`，后者为`Pointcut`+`Advice`。
+
+4. **`Aspect`**
+
+`Aspect`也是 AspectJ 的组件，一组同类的`PointcutAdvisor`的集合就是一个`Aspect`。
+
+在下面代码中，printRequest 和 printResponse 都是`Advice`，genericPointCut 是`Pointcut`，printRequest + genericPointCut 是`PointcutAdvisor`，UserServiceAspect 是`Aspect`。
 
 ```java
 @Aspect
@@ -94,12 +119,6 @@ public class UserServiceAspect {
     }  
 }
 ```
-
-## spring-aop 的组件--Advisor
-
-`Advisor`是 spring-aop 原创的一个组件，**一个`Advice`加上它对应的过滤器，就组成了一个`Advisor`**。在上面例子中，`printRequest`的`Advice`加上它的`Pointcut`，就是一个`Advisor`。而`Aspect`由多个`Advisor`组成。
-
-注意，这里的过滤器，可以是`Pointcut`，也可以是 spring-aop 自定义的`ClassFilter`。
 
 # spring-aop 和 AspectJ 的关系
 
