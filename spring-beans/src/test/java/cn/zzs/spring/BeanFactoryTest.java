@@ -1,9 +1,7 @@
 package cn.zzs.spring;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-
-import java.beans.PropertyDescriptor;
+import static org.junit.Assert.assertNotNull;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -27,163 +25,86 @@ import org.springframework.lang.Nullable;
  * @date 2020年5月11日 上午9:14:31
  */
 public class BeanFactoryTest {
-
     /**
-     * 
-     * 基本的一个流程：创建BeanFactory对象->创建BeanDefinition对象->注册Bean获取->Bean
+     * spring-bean 是一个全局的上下文，我把某个对象丢进这个上下文，然后可以在应用的任何位置获取到这个对象。
+     * 这种方式注册的 bean，实例化、属性装配和初始化并不由 spring-bean 来管理。
      * @author zzs
-     * @date 2020年6月14日 下午12:16:00
-     * @return void
+     * @date 2021年6月2日 上午11:06:18 void
      */
     @Test
-    public void testBase() {
-        // 创建BeanFactory对象
+    public void testContext() {
+        // 创建beanFactory
         DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
-
-        // 创建BeanDefinition对象
-        BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
-
-        // 注册Bean
-        beanFactory.registerBeanDefinition("userService", rootBeanDefinition);
-
-        // 获取Bean
-        IUserService userService = (IUserService)beanFactory.getBean("userService");
-        System.err.println(userService.get("userId"));
+        
+        User user = new User("zzs001", 18);
+        // 存对象
+        beanFactory.registerSingleton("user", user);
+        
+        // 取对象
+        User user2 = (User)beanFactory.getBean("user");
+        assertEquals(user, user2);
     }
 
+    /**
+     * 如果把 spring-bean 当成对象工厂使用，我们需要告诉它如何创建对象，而 beanDefinition 就包含了如何创建对象的所有信息。
+     * @author zzs
+     * @date 2021年5月31日 下午4:48:03 void
+     */
     @Test
-    public void testRegisterWays() {
-        // 创建BeanFactory对象
+    public void testObjectFactory() {
+        // 创建beanFactory
         DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
 
-        // 注册Bean-- BeanDefinition方式
-        BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
-        beanFactory.registerBeanDefinition("userService", rootBeanDefinition);
+        // 定义一个beanDefinition
+        BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(User.class).getBeanDefinition();
+        // 属性装配
         rootBeanDefinition.getPropertyValues().add("name", "zzs001");
         rootBeanDefinition.getPropertyValues().add("age", 18);
+        // 初始化方法
+        rootBeanDefinition.setInitMethodName("init");
+        // 单例还是多例，默认单例
+        rootBeanDefinition.setScope(BeanDefinition.SCOPE_PROTOTYPE);
+        // 注册bean
+        beanFactory.registerBeanDefinition("user", rootBeanDefinition);
 
-        // 注册Bean-- Bean实例方式
-        beanFactory.registerSingleton("userService2", new UserService());
-
-        // 获取Bean
-        IUserService userService = (IUserService)beanFactory.getBean("userService");
-        System.err.println(userService.get("userId"));
-        IUserService userService2 = (IUserService)beanFactory.getBean("userService2");
-        System.err.println(userService2.get("userId"));
+        // 获取bean
+        User user = (User)beanFactory.getBean("user");
+        assertNotNull(user);
     }
 
+    /**
+     * 实际使用中，我们更多的会使用 beanType 而不是 beanName 来获取 bean，beanFactory 也提供了支持。
+     * 我们甚至还可以同时使用 beanName 和 beanType，获取到指定 beanName 的 bean 后会进行类型检查，如果不通过，将会报错。
+     * @author zzs
+     * @date 2021年5月31日 下午3:49:30 void
+     */
     @Test
     public void testGetBeanWays() {
-        // 创建BeanFactory对象
+        // 创建beanFactory
         DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
 
-        // 创建BeanDefinition对象
-        BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
-
-        // 注册Bean
-        beanFactory.registerBeanDefinition("userService", rootBeanDefinition);
-
-        // 获取Bean--通过BeanName
-        IUserService userService = (IUserService)beanFactory.getBean("userService");
-        System.err.println(userService.get("userId"));
-        // 获取Bean--通过BeanType
-        IUserService userService2 = beanFactory.getBean(IUserService.class);
-        System.err.println(userService2.get("userId"));
-        // 获取Bean--通过BeanName+BeanType的方式
-        IUserService userService3 = beanFactory.getBean("userService", IUserService.class);
-        System.err.println(userService3.get("userId"));
-    }
-
-    /**
-     * 
-     * bean冲突的处理办法：
-     * 1. 设置BeanDefinition对象为isPrimary。不适用于registerSingleton的情况
-     * 2. 为BeanFactory设置比较器。
-     * 其中1优先于2
-     * @author zzs
-     * @date 2020年6月14日 下午12:19:40
-     * @return void
-     */
-    @Test
-    public void testPrimary() {
-        // 创建BeanFactory对象
-        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
-
-        // 为BeanFactory设置比较器
-        beanFactory.setDependencyComparator(new OrderComparator() {
-        
-            @Override
-            public Integer getPriority(Object obj) {
-                return obj.hashCode();
-            }
-        });
-
-        // 创建BeanDefinition对象
+        // 注册bean
         BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(User.class).getBeanDefinition();
-        // rootBeanDefinition.setPrimary(true); // 设置BeanDefinition对象为isPrimary
+        beanFactory.registerBeanDefinition("user", rootBeanDefinition);
 
-        // 注册Bean
-        beanFactory.registerBeanDefinition("userRegisterBeanDefinition", rootBeanDefinition);
-        beanFactory.registerSingleton("userRegisterSingleton", new User("zzs002", 19));
-        beanFactory.registerSingleton("userRegisterSingleton2", new User("zzs003", 18));
-
-        // 获取Bean--通过BeanType
-        User user = beanFactory.getBean(User.class);
-        System.err.println(user);
-    }
-
-    /**
-     * 
-     * getBean(String name),这个方法中的name支持以下三种形式：
-     * 1.beanName。如果对应的Bean是FactoryBean，不会返回FactoryBean的实例，而是会返回FactoryBean对应的Bean的实例
-     * 2.alias。一个beanName可以对应多个alias
-     * 3.factoryBeanName。可以返回FactoryBean的实例，形式为：一个或多个& + beanName
-     * @author zzs
-     * @date 2020年6月7日 下午2:59:53
-     * @return void
-     * @throws Exception 
-     * @throws BeansException 
-     */
-    @Test
-    public void testGetBeanByBeanName() throws BeansException, Exception {
-
-        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
-
-        // 注册Bean--注册的是一个 FactoryBean
-        UserServiceFactoryBean userServiceFactoryBean = new UserServiceFactoryBean();
-        beanFactory.registerSingleton("userServiceFactoryBean", userServiceFactoryBean);
-
-        // 注册BeanName的别名
-        beanFactory.registerAlias("userServiceFactoryBean", "userServiceAlias01");
-
-        // 通过BeanName获取
-        assertEquals(userServiceFactoryBean.getObject(), beanFactory.getBean("userServiceFactoryBean"));
-
-        // 通过别名获取
-        assertEquals(userServiceFactoryBean.getObject(), beanFactory.getBean("userServiceAlias01"));
-
-        // 通过&+FactoryBeanName的方式
-        assertEquals(userServiceFactoryBean, beanFactory.getBean("&userServiceFactoryBean"));
+        // 获取bean--通过beanName
+        User user1 = (User)beanFactory.getBean("user");
+        assertNotNull(user1);
         
-        System.err.println(beanFactory.getBean(UserServiceFactoryBean.class));;
+        // 获取bean--通过beanType
+        User user2 = beanFactory.getBean(User.class);
+        assertNotNull(user2);
+        
+        // 获取bean--通过beanName+beanType的方式
+        User user3 = beanFactory.getBean("user", User.class);
+        assertNotNull(user3);
     }
-
-    @Test
-    public void testScope() {
-        // 创建BeanFactory对象
-        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
-
-        // 注册Bean-- BeanDefinition方式
-        BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
-        rootBeanDefinition.setScope(BeanDefinition.SCOPE_PROTOTYPE);
-        beanFactory.registerBeanDefinition("userService", rootBeanDefinition);
-
-        // 获取Bean--通过BeanType
-        IUserService userService1 = beanFactory.getBean(IUserService.class);
-        IUserService userService2 = beanFactory.getBean(IUserService.class);
-        assertNotEquals(userService1, userService2);
-    }
-
+    
+    /**
+     * 当使用 beanName + beanType 来获取 bean 时，如果获取到的 bean 不是指定的类型，这时，并不会立即报错，beanFactory 会尝试使用合适`TypeConverter`来强制转换（需要我们注册上去）。
+     * @author zzs
+     * @date 2021年5月31日 下午4:39:05 void
+     */
     @Test
     public void testTypeConverter() {
 
@@ -195,9 +116,12 @@ public class BeanFactoryTest {
             @Override
             public <T> T convertIfNecessary(@Nullable Object value, @Nullable Class<T> requiredType, @Nullable TypeDescriptor typeDescriptor) throws TypeMismatchException {
 
-                if(UserVO.class.equals(requiredType) && User.class.isInstance(value)) {
+                if(UserVO.class == requiredType && value instanceof User) {
                     User user = (User)value;
-                    return (T)new UserVO(user);
+                    UserVO userVO = new UserVO();
+                    userVO.setName(user.getName());
+                    userVO.setAge(user.getAge());
+                    return (T)userVO;
                 }
                 return null;
             }
@@ -207,63 +131,138 @@ public class BeanFactoryTest {
         beanFactory.registerBeanDefinition("user", rootBeanDefinition);
 
         UserVO bean = beanFactory.getBean("user", UserVO.class);
-        Assert.assertTrue(UserVO.class.isInstance(bean));
+        Assert.assertNotNull(bean);
     }
 
+    /**
+     * 当出现多个同类型的bean时，如果使用类型获取，会报错NoUniqueBeanDefinitionException。可以通过以下方法解决（1优先于2）：
+     * <p>1. 设置BeanDefinition对象为isPrimary。不适用于registerSingleton的情况
+     * <p>2. 为BeanFactory设置比较器（这种用的不多）
+     * @author zzs
+     * @date 2020年6月14日 下午12:19:40
+     * @return void
+     */
     @Test
-    public void testPopulate() {
-        // 创建BeanFactory对象
+    public void testPrimary() {
+        // 创建beanFactory
         DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
 
-        // 定义userService的beanDefinition
-        AbstractBeanDefinition userServiceBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
-        // 定义userDao的beanDefinition
-        AbstractBeanDefinition userDaoBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserDao.class).getBeanDefinition();
-        // 给userService设置装配属性
-        userServiceBeanDefinition.getPropertyValues().add("userDao", userDaoBeanDefinition);
-        // userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
-        // userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_NAME);
+        // 为BeanFactory设置比较器，比较少用
+        beanFactory.setDependencyComparator(new OrderComparator() {
+        
+            @Override
+            public Integer getPriority(Object obj) {
+                return obj.hashCode();
+            }
+        });
 
-        // 注册Bean
-        beanFactory.registerBeanDefinition("userService", userServiceBeanDefinition);
-        beanFactory.registerBeanDefinition("userDao", userDaoBeanDefinition);
 
-        // 获取Bean
-        IUserService userService = (IUserService)beanFactory.getBean("userService");
-        userService.save(null);
+        // 注册bean
+        BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(User.class).getBeanDefinition();
+        // rootBeanDefinition.setPrimary(true); // 设置bean优先
+        beanFactory.registerBeanDefinition("user", rootBeanDefinition);
+        beanFactory.registerSingleton("user2", new User("zzs002", 19));
+        beanFactory.registerSingleton("user3", new User("zzs003", 18));
+
+        // 获取bean
+        User user = beanFactory.getBean(User.class);
+        assertNotNull(user);
     }
 
+    /**
+     * beanFactory 还支持注册一种特殊的对象--factoryBean，当我们获取 bean 时，拿到的不是这个 factoryBean，而是 factoryBean.getObject() 所返回的对象。
+     * 那我就是想返回 factoryBean 怎么办？可以通过以下形式的 beanName 获取：一个或多个& + beanName。
+     * @author zzs
+     * @date 2020年6月7日 下午2:59:53
+     * @return void
+     * @throws Exception 
+     * @throws BeansException 
+     */
+    @Test
+    public void testFactoryBean() throws BeansException, Exception {
+
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+
+        // 注册bean--注册一个 factoryBean
+        UserFactoryBean userFactoryBean = new UserFactoryBean();
+        beanFactory.registerSingleton("user", userFactoryBean);
+
+        // 通过beanName获取
+        assertEquals(User.class, beanFactory.getBean("user").getClass());
+        
+        // 通过beanType获取
+        assertEquals(User.class, beanFactory.getBean(User.class).getClass());
+
+        // 通过&+FactoryBeanName的方式
+        assertEquals(UserFactoryBean.class, beanFactory.getBean("&user").getClass());
+    }
+
+
+    /**
+     * 默认情况下，beanFactory 会读取 beanDefinition 对象中的 propertyValues 来装配成员属性，
+     * 所以，我们想要装配哪个成员属性，只要把键值对 add 进这个 propertyValues 就行。**前提是我们的 bean 必须包含对应成员属性的 setter 方法**。
+     * spring-bean 还提供了更有趣的功能--自动装配。
+     * 我只需要将 beanDefinition 的 autowireMode 设置为自动装配，beanFactory 就会帮我把包含 setter 方法的所有成员属性都赋值（当然，要有值才会赋）。
+     * @author zzs
+     * @date 2021年5月31日 下午4:39:28
+     */
+    @Test
+    public void testAutowire() {
+        // 创建beanFactory
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+
+        // 注册userService
+        AbstractBeanDefinition userServiceBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
+        beanFactory.registerBeanDefinition("userService", userServiceBeanDefinition);
+        
+        // 注册userDao
+        AbstractBeanDefinition userDaoBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserDao.class).getBeanDefinition();
+        beanFactory.registerBeanDefinition("userDao", userDaoBeanDefinition);
+        
+        // 给userService设置装配属性userDao
+        // userServiceBeanDefinition.getPropertyValues().add("userDao", userDaoBeanDefinition);
+        userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+        // userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_NAME);
+
+        // 获取bean
+        UserService userService = (UserService)beanFactory.getBean("userService");
+        assertNotNull(userService.getUserDao());
+    }
+    
+    
+    /**
+     * 我们将 bean 的实例化、属性装配和初始化都交给了 spring-bean 处理，然而，有时我们需要在这些节点对 bean 进行自定义的处理，这时就需要用到 beanPostProcessor。
+     * @author zzs
+     * @date 2021年5月31日 下午4:42:15 void
+     */
     @Test
     public void testPostProcessor() {
+        
         DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
 
         // 添加实例化处理器
         beanFactory.addBeanPostProcessor(new InstantiationAwareBeanPostProcessor() {
-            // 如果这里我们返回了对象，则beanFactory会将它作为bean直接返回，不再进行bean的实例化、属性装配和初始化等操作
+            // 实例前处理
+            // 如果这里我们返回了对象，则beanFactory会将它直接返回，不再进行bean的实例化、属性装配和初始化等操作
             public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) throws BeansException {
-                if(UserService.class.equals(beanClass)) {
-                    System.err.println("bean实例化之前的处理。。 --> ");
-                }
+                System.out.println("处理器：bean实例化之前的处理。。 -->\n\t||\n\t\\/");
                 return null;
             }
 
-            // 这里通过返回的布尔值判断是否需要继续对bean进行属性装配和初始化等操作
+            // 实例后处理
+            // 这里判断是否继续对bean进行属性装配和初始化等操作
             public boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
-                if(UserService.class.isInstance(bean)) {
-                    System.err.println("bean实例化之后的处理。。 --> ");
-                }
+                System.out.println("处理器：bean实例化之后的处理。。 -->\n\t||\n\t\\/");
                 return true;
             }
         });
 
         // 添加装配处理器
         beanFactory.addBeanPostProcessor(new InstantiationAwareBeanPostProcessor() {
-
+            // 属性装配前
             // 这里可以在属性装配前对参数列表进行调整
             public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
-                if(UserService.class.isInstance(bean)) {
-                    System.err.println("属性装配前对参数列表进行调整 --> ");
-                }
+                System.out.println("处理器：属性装配前对参数列表进行调整。。-->\n\t||\n\t\\/");
                 return InstantiationAwareBeanPostProcessor.super.postProcessProperties(pvs, bean, beanName);
             }
 
@@ -271,38 +270,35 @@ public class BeanFactoryTest {
 
         // 添加初始化处理器
         beanFactory.addBeanPostProcessor(new BeanPostProcessor() {
-
-            // 初始化前对bean进行改造
+            // 初始化前
+            // 这里可以在初始化前对bean进行改造
             public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-                if(UserService.class.isInstance(bean)) {
-                    System.err.println("初始化前，对Bean进行改造。。 --> ");
-                }
+                System.out.println("处理器：初始化前，对bean进行改造。。-->\n\t||\n\t\\/");
                 return bean;
             }
 
-            // 初始化后对bean进行改造
+            // 初始化后
+            // 这里可以在初始化后对bean进行改造
             public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-                if(UserService.class.isInstance(bean)) {
-                    System.err.println("初始化后，对Bean进行改造。。 --> ");
-                }
+                System.out.println("处理器：初始化后，对bean进行改造。。 -->\n\t||\n\t\\/");
                 return bean;
             }
         });
-        // 定义userService的beanDefinition
-        AbstractBeanDefinition userServiceBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
-        // 定义userDao的beanDefinition
-        AbstractBeanDefinition userDaoBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserDao.class).getBeanDefinition();
-        // 给userService添加装配属性
-        userServiceBeanDefinition.getPropertyValues().add("userDao", userDaoBeanDefinition);
-        // 给userService设置初始化方法
-        userServiceBeanDefinition.setInitMethodName("init");
         
+        // 定义一个beanDefinition
+        BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(User.class).getBeanDefinition();
+        // 属性装配
+        rootBeanDefinition.getPropertyValues().add("name", "zzs001");
+        rootBeanDefinition.getPropertyValues().add("age", 18);
+        // 初始化方法
+        rootBeanDefinition.setInitMethodName("init");
+        // 单例还是多例，默认单例
+        rootBeanDefinition.setScope(BeanDefinition.SCOPE_PROTOTYPE);
         // 注册bean
-        beanFactory.registerBeanDefinition("userService", userServiceBeanDefinition);
-        beanFactory.registerBeanDefinition("userDao", userDaoBeanDefinition);
-
-        IUserService userService = (IUserService)beanFactory.getBean("userService");
-        System.err.println(userService.get("userId"));
+        beanFactory.registerBeanDefinition("user", rootBeanDefinition);
+        
+        User user = (User)beanFactory.getBean("user");
+        assertNotNull(user);
     }
 
 }

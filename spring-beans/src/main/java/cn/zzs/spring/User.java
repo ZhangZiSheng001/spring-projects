@@ -6,12 +6,22 @@ public class User {
     
     private Integer age;
     
+    public User() {
+        super();
+        System.err.println("主流程：User对象实例化中。。-->\n\t||\n\t\\/");
+    }
+    
     public User(String name, Integer age) {
         super();
+        System.err.println("主流程：User对象实例化中。。-->\n\t||\n\t\\/");
         this.name = name;
         this.age = age;
     }
     
+    
+    public void init() {
+        System.err.println("主流程：User对象初始化中。。-->\n\t||\n\t\\/");
+    }
     
     
     public String getName() {
@@ -21,6 +31,7 @@ public class User {
     
     
     public void setName(String name) {
+        System.err.println("主流程：User对象属性name装配中。。-->\n\t||\n\t\\/");
         this.name = name;
     }
     
@@ -33,6 +44,7 @@ public class User {
     
     
     public void setAge(Integer age) {
+        System.err.println("主流程：User对象属性age装配中。。-->\n\t||\n\t\\/");
         this.age = age;
     }
     
@@ -84,8 +96,4 @@ public class User {
     }
 
 
-
-    public User() {
-        super();
-    }
 }

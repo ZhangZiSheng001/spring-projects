@@ -5,13 +5,6 @@ public class UserVO {
     
     private Integer age;
     
-    public UserVO(User user) {
-        super();
-        this.name = user.getName();
-        this.age = user.getAge();
-    }
-    
-    
     
     public String getName() {
         return name;

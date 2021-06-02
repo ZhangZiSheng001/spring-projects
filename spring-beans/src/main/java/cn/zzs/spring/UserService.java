@@ -4,14 +4,13 @@ public class UserService implements IUserService {
     
     private UserDao userDao;
     
-    
     public UserService() {
         super();
-        System.err.println("UserService构造方法被调用 --> ");
+        System.err.println("UserService1构造方法被调用 --> ");
     }
     
     public void init() {
-        System.err.println("UserService的init方法被调用 --> ");
+        System.err.println("UserService1的init方法被调用 --> ");
     }
     
     
@@ -20,7 +19,7 @@ public class UserService implements IUserService {
     }
     
     public void setUserDao(UserDao userDao) {
-        System.err.println("UserService的属性装配中 --> ");
+        System.err.println("UserService1装配属性userDao --> ");
         this.userDao = userDao;
     }
     
@@ -29,7 +28,7 @@ public class UserService implements IUserService {
     }
     
     public void save(User user) {
-        System.err.println("Service save user：" + user);
+        System.err.println("UserService1 save user：" + user);
         userDao.save(user);
     }
 
