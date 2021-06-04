@@ -5,20 +5,14 @@
     <artifactId>spring-beans-demo</artifactId>
     <packaging>jar</packaging>
     <version>1.0.0</version>
-    <name>spring-beans-demo</name>
-    <url>http://maven.apache.org</url>
 
 
-    <properties>
-        <spring.version>5.2.6.RELEASE</spring.version>
-    </properties>
-    
     <dependencies>
         <!-- spring -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-beans</artifactId>
-            <version>${spring.version}</version>
+            <version>5.2.6.RELEASE</version>
         </dependency>
         <!-- junit -->
         <dependency>
@@ -35,4 +29,17 @@
             <type>jar</type>
         </dependency>
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
