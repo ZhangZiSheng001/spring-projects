@@ -3,8 +3,8 @@
 在上一篇博客([Spring源码系列(一)--详细介绍bean组件](https://www.cnblogs.com/ZhangZiSheng001/p/13126053.html))中，我们讨论了 spring-bean 是什么？用来解决什么问题？如何使用 spring-bean？等等问题，算是从使用者的角度对 spring-bean 有了一定了解。这篇博客我们将开始分析 spring-bean 的源码，大致的思路如下：
 
 1. spring-bean 是如何设计的
-3. 开始看源码--从哪里开始
-4. bean 冲突的处理
+2. 开始看源码--从哪里开始
+3. bean 冲突的处理
 4. 先看看是否需要创建
 5. 开始创建 bean
 6. bean 的实例化
@@ -17,7 +17,7 @@
 
 和往常一样，为了让思路更连贯一些，我们还是按套路来：**从宏观到微观**。这里我画了一张 spring-bean  的“设计图”。
 
-<img src="D:\growUp\git_repository\11-spring-projects\spring-beans\img\BeanFactoryUML_01.png" alt="BeanFactoryUML_01"  />
+![BeanFactoryUML_01](https://img2020.cnblogs.com/blog/1731892/202106/1731892-20210610131522589-2144305263.png)
 
 是不是看起来很复杂呢？单看这么多的类和线条确实挺复杂的，但我们知道，代码实现都是对上层设计的具体化，我们经常会强调说，写代码前要先设计一下，也是这个道理，所以只要我们适当地分层、抽象，就可以从宏观到微观逐步地了解一个表面看起来非常复杂的体系。
 
@@ -29,11 +29,11 @@
 
 1. 如果我们把 sping-bean 当成全局上下文时，会使用`SingletonBeanRegistry`来存 bean，再用`BeanFactory`取 bean；
 
-<img src="D:\growUp\git_repository\11-spring-projects\spring-beans\img\spring-bean-abstract01.png" alt="spring-bean-abstract01" style="zoom: 67%;" />
+<img src="https://img2020.cnblogs.com/blog/1731892/202106/1731892-20210610131601020-913041293.png" alt="spring-bean-abstract01" style="zoom: 67%;" />
 
 2. 如果我们把 spring-bean 当成对象工厂时，会使用`BeanDefinitionRegistry`注册 beanDefinition，再用`BeanFactory`获取 bean。
 
-<img src="D:\growUp\git_repository\11-spring-projects\spring-beans\img\spring-bean-abstract02.png" alt="spring-bean-abstract02" style="zoom:67%;" />
+<img src="https://img2020.cnblogs.com/blog/1731892/202106/1731892-20210610131618494-131159315.png" alt="spring-bean-abstract02" style="zoom:67%;" />
 
 也就是说，**作为 spring-bean 的使用者，我们一般只会使用到三个接口：`SingletonBeanRegistry`、`BeanDefinitionRegistry`和`BeanFactory`**。
 
@@ -582,10 +582,3 @@ rootBeanDefinition.getPropertyValues().add("hobbies[0]", "发呆");
 > 相关源码请移步：[ spring-beans](https://github.com/ZhangZiSheng001/spring-projects/tree/master/spring-beans)
 
 > 本文为原创文章，转载请附上原文出处链接：[https://www.cnblogs.com/ZhangZiSheng001/p/13196228.html](https://www.cnblogs.com/ZhangZiSheng001/p/13196228.html)
-
-
-
-
-
-
-
