@@ -291,13 +291,15 @@ spring-bean 是一个全局的上下文，我把某个对象丢进这个上下�
 
 通过 beanType 获取 bean 时，当存在多个同类型 bean 的时候，spring-bean 的处理逻辑是这样的：
 
-1. 检查是否存在唯一一个`isPrimary = true`的 bean，存在的话将它返回；
-2. 通过`OrderComparator`来计算每个 bean 的 priority，取 priority 最小的返回（`OrderComparator`需要我们自己注册）。注意，通过 registerSingleton 注册的和通过 registerBeanDefinition 注册的，比较的对象是不一样的，前者比较的对象是 bean 实例，后者比较的对象是 bean 类型，另外，这种方法不能存在相同 priority 的 bean。
+1. 只保留通过 registerSingleton 注册的以及通过通过registerBeanDefinition注册且autowireCandidate = true的；
+2. 检查是否存在唯一一个`isPrimary = true`的 bean，存在的话将它返回；
+3. 通过`OrderComparator`来计算每个 bean 的 priority，取 priority 最小的返回（`OrderComparator`需要我们自己注册）。注意，通过 registerSingleton 注册的和通过 registerBeanDefinition 注册的，比较的对象是不一样的，前者比较的对象是 bean 实例，后者比较的对象是 bean 类型，另外，这种方法不能存在相同 priority 的 bean。
 
-所以，为了解决这种冲突，可以采取两种方法（1优先于2）：
+所以，为了解决这种冲突，可以采取三种方法：
 
-1. **设置 beanDefinition 对象的 isPrimary = true**。不适用于 registerSingleton 的情况。
-2. 为 beanFactory 注册`OrderComparator`（这种用的不多）。
+1. 仅保留一个 beanDefinition 的 autowireCandidate = true。全部 beanName 都是通过 registerBeanDefinition 注册的才有效。
+2. 设置其中一个 beanDefinition 的 isPrimary = true。
+3. 为 beanFactory 注册`OrderComparator`（这种用的不多）。
 
 代码如下：
 
@@ -316,6 +318,7 @@ spring-bean 是一个全局的上下文，我把某个对象丢进这个上下�
 
         // 注册bean
         BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(User.class).getBeanDefinition();
+        // rootBeanDefinition.setAutowireCandidate(false);
         // rootBeanDefinition.setPrimary(true); // 设置bean优先
         beanFactory.registerBeanDefinition("user", rootBeanDefinition);
         beanFactory.registerSingleton("user2", new User("zzs002", 19));

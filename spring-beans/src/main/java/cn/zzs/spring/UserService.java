@@ -4,6 +4,12 @@ public class UserService implements IUserService {
     
     private UserDao userDao;
     
+    public UserService(UserDao userDao) {
+        super();
+        this.userDao = userDao;
+        System.err.println("UserService1构造方法被调用 --> ");
+    }
+    
     public UserService() {
         super();
         System.err.println("UserService1构造方法被调用 --> ");

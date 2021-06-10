@@ -38,18 +38,12 @@ interface BeanDefinitionRegistry
 abstract class FactoryBeanRegistrySupport
 class DefaultSingletonBeanRegistry 
 }
-class SimpleAliasRegistry 
 interface SingletonBeanRegistry
 DefaultListableBeanFactory .up.|> BeanDefinitionRegistry
 
 FactoryBeanRegistrySupport -up-|> DefaultSingletonBeanRegistry
-DefaultSingletonBeanRegistry -up-|> SimpleAliasRegistry
 DefaultSingletonBeanRegistry .up.|> SingletonBeanRegistry
 AbstractBeanFactory -up-|>FactoryBeanRegistrySupport
-
-interface AliasRegistry
-SimpleAliasRegistry .up.|> AliasRegistry
-BeanDefinitionRegistry -up-|> AliasRegistry
 
 right footer <font size="15" color="red">ZhangZiSheng001</font>
 @enduml

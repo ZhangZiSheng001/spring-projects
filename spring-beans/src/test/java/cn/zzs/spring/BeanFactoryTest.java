@@ -58,12 +58,17 @@ public class BeanFactoryTest {
         // 定义一个beanDefinition
         BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(User.class).getBeanDefinition();
         // 属性装配
+        //rootBeanDefinition.getConstructorArgumentValues().addIndexedArgumentValue(0, "zzs001");
+        //rootBeanDefinition.getConstructorArgumentValues().addIndexedArgumentValue(1, 18);
         rootBeanDefinition.getPropertyValues().add("name", "zzs001");
-        rootBeanDefinition.getPropertyValues().add("age", 18);
+        rootBeanDefinition.getPropertyValues().add("age", "18");
+        rootBeanDefinition.getPropertyValues().add("address.name", "波斯尼亚和黑塞哥维那");
+        rootBeanDefinition.getPropertyValues().add("hobbies[0]", "发呆");
+        rootBeanDefinition.getPropertyValues().add("hobbies[1]", "睡觉");
         // 初始化方法
         rootBeanDefinition.setInitMethodName("init");
         // 单例还是多例，默认单例
-        rootBeanDefinition.setScope(BeanDefinition.SCOPE_PROTOTYPE);
+        // rootBeanDefinition.setScope(BeanDefinition.SCOPE_PROTOTYPE);
         // 注册bean
         beanFactory.registerBeanDefinition("user", rootBeanDefinition);
 
@@ -148,21 +153,22 @@ public class BeanFactoryTest {
         DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
 
         // 为BeanFactory设置比较器，比较少用
-        beanFactory.setDependencyComparator(new OrderComparator() {
+        /*beanFactory.setDependencyComparator(new OrderComparator() {
         
             @Override
             public Integer getPriority(Object obj) {
                 return obj.hashCode();
             }
-        });
+        });*/
 
 
         // 注册bean
         BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(User.class).getBeanDefinition();
+        // rootBeanDefinition.setAutowireCandidate(false);
         // rootBeanDefinition.setPrimary(true); // 设置bean优先
         beanFactory.registerBeanDefinition("user", rootBeanDefinition);
         beanFactory.registerSingleton("user2", new User("zzs002", 19));
-        beanFactory.registerSingleton("user3", new User("zzs003", 18));
+        //beanFactory.registerSingleton("user3", new User("zzs003", 18));
 
         // 获取bean
         User user = beanFactory.getBean(User.class);
@@ -221,8 +227,9 @@ public class BeanFactoryTest {
         
         // 给userService设置装配属性userDao
         // userServiceBeanDefinition.getPropertyValues().add("userDao", userDaoBeanDefinition);
-        userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+        // userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
         // userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_NAME);
+        userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_CONSTRUCTOR);
 
         // 获取bean
         UserService userService = (UserService)beanFactory.getBean("userService");
