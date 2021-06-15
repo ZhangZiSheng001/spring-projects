@@ -526,43 +526,87 @@ spring-bean 的代码非常多，把所有代码都分析一遍非常难。**这
     }
 ```
 
-## 给属性装配值
+## propertyName的形式以及存取器propertyAccessor
 
-进入`AbstractNestablePropertyAccessor.setPropertyValue(PropertyValue)`。这个方法做了这么一件事：**给属性装配值**。我们定义 beanDefinition 待装配属性时，可以有三种 propertyName 的格式：
+在继续分析源码前，我们先来了解下属性装配的一些设计逻辑。在下面这个类中，存在三种成员属性。
+
+```java
+public class User {
+    // 普通属性
+    private String name;
+    private Integer age;
+    
+    // 对象属性
+    private Address address = new Address();
+    
+    // 集合属性
+    private List<String> hobbies = new ArrayList<>();
+}
+```
+
+相应地，spring-bean 支持三种 propertyName 的格式：
 
 ```java
 // 普通形式的propertyName
 rootBeanDefinition.getPropertyValues().add("name", "zzs001");
-// 嵌套对象形式的propertyName
+// 嵌套对象形式的propertyName，可以一直嵌套下去，例如：user.address.name
 rootBeanDefinition.getPropertyValues().add("address.name", "波斯尼亚和黑塞哥维那");
 // 索引形式的propertyName
 rootBeanDefinition.getPropertyValues().add("hobbies[0]", "发呆");
 ```
 
-多形式 propertyName 支持导致赋值的方法变得比较复杂。这部分内容我暂时就不展开了，后面有空再补上。
+那么，针对上面三种形式的 propertyName，spring-bean 如何存取对象的属性呢？
+
+**在 spring-bean 中，使用`org.springframework.beans.PropertyAccessor`这个类来实现对成员属性的存取**。
 
 ```java
-    public void setPropertyValue(PropertyValue pv) throws BeansException {
-        // 适配入参
-        setPropertyValue(pv.getName(), pv.getValue());
-    }    
-    public void setPropertyValue(String propertyName, @Nullable Object value) throws BeansException {
-        AbstractNestablePropertyAccessor nestedPa;
-        try {
-            // 获取propertyName对应的PropertyAccessor对象，这里将解析“嵌套对象形式”的propertyName
-            // 如果缓存里有的话，将复用
-            nestedPa = getPropertyAccessorForPropertyPath(propertyName);
-        }
-        catch (NotReadablePropertyException ex) {
-            throw new NotWritablePropertyException(getRootClass(), this.nestedPath + propertyName,
-                    "Nested property in path '" + propertyName + "' does not exist", ex);
-        }
-        // 创建PropertyTokenHolder对象，这里将解析“索引形式”的propertyName
-        PropertyTokenHolder tokens = getPropertyNameTokens(getFinalPath(nestedPa, propertyName));
-        // 使用PropertyAccessor对象进行赋值操作
-        nestedPa.setPropertyValue(tokens, new PropertyValue(propertyName, value));
-    }
+public interface PropertyAccessor {
+    boolean isReadableProperty(String propertyName);
+    boolean isWritableProperty(String propertyName);
+    Object getPropertyValue(String propertyName) throws BeansException;
+    void setPropertyValue(String propertyName, Object value) throws BeansException;
+}
 ```
+
+每个需要装配的对象都有一个对应的 propertyAccessor。需要注意一点，**propertyAccessor 只能存取当前绑定对象的“一级属性”**，例如，user 的 propertyAccessor 只能装配`address=new Address("波斯尼亚和黑塞哥维那")`，而不能装配`address.name=波斯尼亚和黑塞哥维那`。如果要存取 address.name，需要获取到 address 的 propertyAccessor 来进行存取。这里还是用一段代码来解释吧，后面的源码本质上也差不多。
+
+```java
+// BeanWrapperImpl是`PropertyAccessor`，所以bw可以看成是user的存取器
+BeanWrapperImpl bw = new BeanWrapperImpl();
+bw.setBeanInstance(new User());
+
+// 赋值name属性需要用到的存取器，nestedPa01 == bw
+AbstractNestablePropertyAccessor nestedPa01 = bw.getPropertyAccessorForPropertyPath("name");
+nestedPa.setPropertyValue("name", "zzs001");
+assertEquals(bw, nestedPa01);
+
+// 赋值address.name属性需要用到的存取器，nestedPa01 != bw
+AbstractNestablePropertyAccessor nestedPa02 = bw.getPropertyAccessorForPropertyPath("address.name");
+nestedPa.setPropertyValue("name", "波斯尼亚和黑塞哥维那");
+assertEquals(bw, nestedPa02);
+```
+
+至于索引形式的处理，其实和普通属性差不多。我就不展开了。
+
+那么，我们继续看源码吧。
+
+## 给属性装配值
+
+进入`AbstractNestablePropertyAccessor.setPropertyValue(String,Object)`。这个方法做了这么一件事：**给属性装配值**。现在看看这段代码是不是和我们的例子差不多呢？
+
+```java
+public void setPropertyValue(String propertyName, @Nullable Object value) throws BeansException {
+    // 获取propertyName对应的存取器
+    // 如果缓存里有的话，将复用
+    AbstractNestablePropertyAccessor nestedPa = getPropertyAccessorForPropertyPath(propertyName);
+    // 创建PropertyTokenHolder对象，这里将解析“索引形式”的propertyName
+    PropertyTokenHolder tokens = getPropertyNameTokens(getFinalPath(nestedPa, propertyName));
+    // 使用存取器进行赋值操作
+    nestedPa.setPropertyValue(tokens, new PropertyValue(propertyName, value));
+}
+```
+
+那么，属性装配部分的分析就点到为止吧。
 
 # 最后补充
 
@@ -570,7 +614,7 @@ rootBeanDefinition.getPropertyValues().add("hobbies[0]", "发呆");
 
 1. 创建多例 bean；
 2. 无参构造实例化；
-3. 属性装配中，根据自动装配类型添加待装配属性、多种形式 propertyName 值的装配；
+3. 属性装配中，根据自动装配类型添加待装配属性；
 4. bean 的初始化。
 
 后面有空我再做补充吧，感兴趣的读者也可以自行分析。另外，以上内容如有错误，欢迎指正。
