@@ -41,9 +41,9 @@
 
 这就是使用者眼里的 spring-bean。
 
-## 从开发者的角度来看
+## 从设计者的角度来看
 
-接着，我们从开发者的角度来看。除了要提供上面的几个接口，还需要提供更多的东西。
+接着，我们从设计者的角度来看。除了要提供上面的几个接口，还需要提供更多的东西。
 
 1. 如果 spring-bean 被当成全局上下文，需要有一个地方来存放这些全局对象。
 
@@ -66,7 +66,7 @@ class DefaultListableBeanFactory {
 
 3. 如果 spring-bean 被当成对象工厂，还需要根据 beanDefinition 的信息来创建 bean，这部分功能独立成一个接口--`AutowireCapableBeanFactory`，用来进行实例化、装配属性、初始化等。
 
-这就是开发者眼里的 spring-bean。
+这就是设计者眼里的 spring-bean。
 
 ## 补充
 
@@ -621,7 +621,7 @@ public void setPropertyValue(String propertyName, @Nullable Object value) throws
 
 最后，感谢阅读。
 
-> 2021-06-10更改
+> 2021-09-27更改
 
 > 相关源码请移步：[ spring-beans](https://github.com/ZhangZiSheng001/spring-projects/tree/master/spring-beans)
 
