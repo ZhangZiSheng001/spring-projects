@@ -23,8 +23,6 @@ Spring：5.2.6.RELEASE
 
 实际项目中，Spring 可以“悄无声息”地完成对 bean 的代理，本质是通过注册`BeanPostProcessor`来实现，原理并不复杂。如果你对 spring-bean 感兴趣的话，可以参考博客[Spring源码系列(二)--bean组件的源码分析](https://www.cnblogs.com/ZhangZiSheng001/p/13196228.html)。
 
-最后，和以往不同，
-
 # 几个重要的组件
 
 说到 spring-aop，我们经常会提到**`Joinpoint`、`Advice`、`Pointcut`、`Aspect`、`Advisor`**等等概念，它们都是抽象出来的“标准”，有的来自 aopalliance，有的来自 AspectJ，也有的是 spring-aop 原创。
@@ -77,6 +75,8 @@ Spring：5.2.6.RELEASE
 为了更好地理解这两个概念，我再举一个例子：当我们对用户进行新增操作前，需要进行权限校验。其中，调用 user.save()  的动作就是一个的`Joinpoint`，权限校验就是一个`Advice`，即对`Joinpoint`（新增用户的动作）做`Advice`（权限校验）。
 
 **在 spring-aop 中，`Joinpoint`对象持有了一条 Advice chain ，调用`Joinpoint`的`proceed()`方法将采用责任链的形式依次执行各个 Advice**（注意，`Advice`的执行可以互相嵌套，不是单纯的先后顺序）。cglib 和 JDK 动态代理的缺点就在于，它们没有所谓的 Advice chain，一个`Joinpoint`一般只能分配一个`Advice`，当需要使用多个`Advice`时，需要像套娃一样层层代理。
+
+## 其他的几个概念
 
 在 spring-aop 中，还会使用到其他的概念，例如`Advice Filter`、`Advisor`、`Pointcut`、`Aspect`等。这些概念的重要性不如`Joinpoint`、`Advice`，如果对深入了解 spring-aop 不感兴趣的话，可以不用了解。
 
