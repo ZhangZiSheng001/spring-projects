@@ -1,8 +1,8 @@
 # 简介
 
-前面已经讲完 spring-bean( 详见[Spring](https://www.cnblogs.com/ZhangZiSheng001/category/1776792.html) )，这篇博客开始攻克 Spring 的另一个重要模块--spring-aop。
+前面已经讲完 spring-bean( 详见[Spring](https://www.cnblogs.com/ZhangZiSheng001/category/1776792.html) )，这篇博客开始攻克 Spring 的另一个核心模块--spring-aop。
 
-spring-aop 用于生成动态代理类（底层是使用 JDK 动态代理或 cglib 来生成代理类），搭配 spring-bean 一起使用，可以使 AOP 更加解耦、方便。在实际项目中，spring-aop 被广泛用来实现日志、权限、事务、异常等的统一管理。
+顾名思义，spring-aop 是用来做 AOP 开发的，搭配 spring-bean 一起使用的话，AOP 将更加解耦、方便。在实际项目中，spring-aop 被广泛用来实现日志、权限、事务、异常等的统一管理。
 
 我将通过两篇博客来详细介绍 spring-aop 的使用、源码等。这是第一篇博客，主要介绍 spring-aop 的组件、架构、使用等。
 
@@ -18,7 +18,7 @@ Spring：5.2.6.RELEASE
 
 # 几个重要的组件
 
-说到 spring-aop，我们经常会提到**`Pointcut`、`Joinpoint`、`Advice`、`Aspect`**等等概念，它们都是抽象出来的“标准”，有的来自 aopalliance，有的来自 AspectJ，也有的是 spring-aop 原创。
+说到 spring-aop，我们经常会提到**`Joinpoint`、`Advice`、`Pointcut`、`Aspect`、`Advisor`**等等概念，它们都是抽象出来的“标准”，有的来自 aopalliance，有的来自 AspectJ，也有的是 spring-aop 原创。
 
 它们是构成 spring-aop “设计图”的基础，理解它们非常难，一个原因是网上能讲清楚的不多，第二个原因是这些组件本身抽象得不够直观（spring 官网承认了这一点）。
 
@@ -43,19 +43,19 @@ Spring：5.2.6.RELEASE
                 MethodInvocation.class
 ```
 
-使用 UML 表示以上类的关系，如下。可以看到，这主要包含两个部分：`Joinpoint`和`Advice`（这是 AOP 最核心的两个概念）。完整的 aopalliance 包，除了 aop 和 intercept，还包括了 instrument 和 reflect，后面这两个部分 spring-aop 没有引入，这里就不说了。
+使用 UML 表示以上类的关系，如下。可以看到，这主要包含两个部分：**`Joinpoint`和`Advice`（这是 AOP 最核心的两个概念）**。完整的 aopalliance 包，除了 aop 和 intercept，还包括了 instrument 和 reflect，后面这两个部分 spring-aop 没有引入，这里就不说了。
 
-![AopAopallianceUML](https://img2020.cnblogs.com/blog/1731892/202009/1731892-20200928154513960-770091995.png)
+![AopAopallianceUML](https://img2020.cnblogs.com/blog/1731892/202109/1731892-20210927141031977-1366903158.png)
 
 1. **Joinpoint**
 
-**`Joinpoint`表示调用某个方法（构造方法或成员方法），或者操作某个成员属性的事件**。
+**`Joinpoint`表示对某个方法（构造方法或成员方法）或属性的调用**。
 
-例如，我调用了`user.save()` 方法，这个事件就属于一个`Joinpoint`。`Joinpoint`是一个“动态”的概念，`Field`、`Method`、或`Constructor`等对象是它的静态部分。
+例如，我调用了 user.save() 方法，这个调用动作就属于一个`Joinpoint`。`Joinpoint`是一个“动态”的概念，`Field`、`Method`、`Constructor`等对象是它的静态部分。
 
 如上图所示，**`Joinpoint`是`Advice`操作的对象**。
 
-在 spring-aop 中，主要使用`Joinpoint`的子接口--`MethodInvocation`，JDK 动态代理使用的`MethodInvocation`实现类为`ReflectiveMethodInvocation`，cglib 使用的是`MethodInvocation`实现类为`CglibMethodInvocation`。
+在 spring-aop 中，主要使用`Joinpoint`的子接口--`MethodInvocation`。
 
 2. **Advice**
 
@@ -65,25 +65,25 @@ Spring：5.2.6.RELEASE
 
 在 spring-aop 中，主要使用`Advice`的子接口--`MethodInterceptor`。
 
-为了更好地理解这两个概念，我再举一个例子：当我们对用户进行增删改查前，进行权限校验。其中，调用用户的新增方法的事件就是一个的`Joinpoint`，权限校验就是一个`Advice`，即对`Joinpoint`做`Advice`。
+为了更好地理解这两个概念，我再举一个例子：当我们对用户进行新增操作前，需要进行权限校验。其中，调用 user.save()  的动作就是一个的`Joinpoint`，权限校验就是一个`Advice`，即对`Joinpoint`（新增用户的动作）做`Advice`（权限校验）。
 
-**在 spring-aop 中，`Joinpoint`对象持有了一条`Advice chain`，调用`Joinpoint`的`proceed()`方法将采用责任链的形式依次执行**（注意，`Advice`的执行可以互相嵌套，不是单纯的先后顺序）。
+**在 spring-aop 中，`Joinpoint`对象持有了一条 Advice chain ，调用`Joinpoint`的`proceed()`方法将采用责任链的形式依次执行各个 Advice**（注意，`Advice`的执行可以互相嵌套，不是单纯的先后顺序）。cglib 和 JDK 动态代理的缺点就在于，它们没有所谓的 Advice chain，一个`Joinpoint`一般只能分配一个`Advice`，当需要使用多个`Advice`时，需要像套娃一样层层代理。
 
 ## 其他的几个概念
 
-在 spring-aop 中，还会使用到其他的概念，例如`Advice Filter`、`Advisor`、`Pointcut`、`Aspect`等。
+在 spring-aop 中，还会使用到其他的概念，例如`Advice Filter`、`Advisor`、`Pointcut`、`Aspect`等。这些概念的重要性不如`Joinpoint`、`Advice`，如果对深入了解 spring-aop 不感兴趣的话，可以不用了解。
 
-1. **`Advice Filter`**
+1. **Advice Filter**
 
-**`Advice Filter`一般和`Advice`绑定，它用来告诉我们，`Advice`是否作用于指定的`Joinpoint`**，如果 true，则将`Advice`加入到当前`Joinpoint`的`Advice chain`，如果为 false，则不加入。
+**Advice Filter 一般和`Advice`绑定，它用来告诉我们，`Advice`是否作用于指定的`Joinpoint`**，如果 true，则将`Advice`加入到当前`Joinpoint`的`Advice chain`，如果为 false，则不加入。
 
-在 spring-aop 中，常用的`Advice Filter`包括`ClassFilter`和`MethodMatcher`，前者过滤的是类，后者过滤的是方法。
+在 spring-aop 中，常用的 Advice Filter 包括`ClassFilter`和`MethodMatcher`，前者过滤的是类，后者过滤的是方法。
 
 2. **`Pointcut`**
 
-**`Pointcut`是 AspectJ 的组件，它一种 `Advice Filter`**。
+**`Pointcut`是 AspectJ 的组件，它是一种  Advice Filter**。
 
-在 spring-aop 中，`Pointcut`=`ClassFilter`+`MethodMatcher`。
+在 spring-aop 中，`Pointcut`=`ClassFilter`+`MethodMatcher`+。
 
 3. **`Advisor`**
 
@@ -128,9 +128,9 @@ spring-aop 之所以和 AspectJ 产生关联，主要是因为借鉴了 AspectJ 
 
 # 如何使用 spring-aop
 
-接下来展示的代码可能有的人看了会觉得奇怪，“怎么和我平时用 spring-aop 不一样呢？”。这里先说明一点，**因为本文讲的是 spring-aop，所以，我用的都是 spring-aop 的 API**，而实际项目中，由于 spring 封装了一层又一层，导致我们感知不到 spring-aop 的存在。
+接下来展示的代码可能有的人看了会觉得奇怪，怎么和我平时用 spring-aop 不一样呢？。这里先说明一点，**因为本文讲的是 spring-aop，所以，我用的都是 spring-aop 原生的 API**，而实际项目中，由于 spring 封装了一层又一层，导致我们感知不到 spring-aop 的存在。
 
-通常情况下，Spring 是通过向`BeanFactory`注册`BeanPostProcessor`（例如，`AbstractAdvisingBeanPostProcessor`）的方式对 bean 进行动态代理，原理并不复杂，相关内容可以通过 spring-bean 了解（ [Spring源码系列(二)--bean组件的源码分析](https://www.cnblogs.com/ZhangZiSheng001/p/13196228.html) ）。
+通常情况下，Spring 是通过向`BeanFactory`注册`BeanPostProcessor`（例如，`AbstractAdvisingBeanPostProcessor`）的方式对 bean 使用 spring-aop 的功能，原理并不复杂，相关内容可以通过 spring-bean 了解（ [Spring源码系列(二)--bean组件的源码分析](https://www.cnblogs.com/ZhangZiSheng001/p/13196228.html) ）。
 
 接下来让我们抛开这些“高级封装”，看看 spring-aop 的真面目。
 
@@ -138,7 +138,9 @@ spring-aop 之所以和 AspectJ 产生关联，主要是因为借鉴了 AspectJ 
 
 下面通过一个 UML 图来了解下 spring-aop 的结构，如下。
 
-![ProxyFactoryUML](https://img2020.cnblogs.com/blog/1731892/202009/1731892-20200915090711597-1505551851.png)
+![ProxyFactoryUML](https://img2020.cnblogs.com/blog/1731892/202109/1731892-20210927143035862-2039404617.png)
+
+**spring-aop 采用动态代理为目标类生成一个代理对象，Joinpoint 的组装和 advice chain 的执行都是在这个代理对象中完成，而不是通过层层代理的方式来实现**。
 
 spring-aop 为我们提供了三种代理工厂，其中`ProxyFactory`比较普通，`AspectJProxyFactory`支持 AspectJ 语法的代理工厂，`ProxyFactoryBean`可以给 Spring IoC 管理的 bean 进行代理。
 
@@ -302,6 +304,8 @@ public class UserServiceAspect {
 关于 spring-aop 的组件、架构、使用等内容，就介绍到这里，第二篇博客再分析具体源码。
 
 感谢阅读。以上内容如有错误，欢迎指正。 
+
+> 2021-09-27更改
 
 > 相关源码请移步：[ spring-aop]( https://github.com/ZhangZiSheng001/spring-projects/tree/master/spring-aop )
 
