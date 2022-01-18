@@ -460,11 +460,54 @@ spring-bean 还提供了更有趣的功能--自动装配。我只需要将 beanD
 
 ![spring-bean-test03](https://img2020.cnblogs.com/blog/1731892/202106/1731892-20210602224510793-1748338641.png)
 
+## 循环依赖
+
+spring-bean 中，bean 的属性装配是支持循环依赖的。只是我们需要注意 bean 的 scope 对循环依赖的影响，如下：  
+
+已知 userService 和 userDao 相互依赖，且它们均为多例，这时将报错：无法解析的循环依赖。
+
+![spring-bean-test04.png](https://img2020.cnblogs.com/blog/1731892/202201/1731892-20220118001246503-1571320828.png)
+
+如果 userService 为单例，userDao 为多例，这时会有两种情况：  
+
+1. 如果你先获取的是多例的 userDao，则会报错。具体原理，和上面两个都是多例的一样。
+2. 如果你先获取的是单例的 userService，那么不会报错；  
+
+![spring-bean-test05.png](https://img2020.cnblogs.com/blog/1731892/202201/1731892-20220118001309985-66306953.png)
+
+具体代码如下：
+
+```java
+    @Test
+    public void testCircularReference() {
+        // 创建beanFactory
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+
+        // 注册userService
+        AbstractBeanDefinition userServiceBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
+        //userServiceBeanDefinition.setScope(ConfigurableBeanFactory.SCOPE_PROTOTYPE);
+        userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+        beanFactory.registerBeanDefinition("userService", userServiceBeanDefinition);
+        
+        // 注册userDao
+        AbstractBeanDefinition userDaoBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserDao.class).getBeanDefinition();
+        userDaoBeanDefinition.setScope(ConfigurableBeanFactory.SCOPE_PROTOTYPE);
+        userDaoBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+        beanFactory.registerBeanDefinition("userDao", userDaoBeanDefinition);
+
+        // 获取bean
+        UserService userService = (UserService)beanFactory.getBean("userService");
+        assertNotNull(userService.getUserDao());
+        UserDao userDao = (UserDao)beanFactory.getBean("userDao");
+        assertNotNull(userDao.getUserService());
+    }
+```
+
 以上，基本介绍完 spring-bean 组件的使用。后续发现其他有趣的地方再做补充，也欢迎大家指正不足的地方。
 
 最后，感谢阅读。
 
-> 2021-09-26更改
+> 2022-01-18更改
 >
 > 相关源码请移步：[ spring-beans](https://github.com/ZhangZiSheng001/spring-projects/tree/master/spring-beans)
 

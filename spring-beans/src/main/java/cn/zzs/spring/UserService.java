@@ -7,12 +7,12 @@ public class UserService implements IUserService {
     public UserService(UserDao userDao) {
         super();
         this.userDao = userDao;
-        System.err.println("UserService1构造方法被调用 --> ");
+        System.err.println("UserService1有参构造方法被调用 --> ");
     }
     
     public UserService() {
         super();
-        System.err.println("UserService1构造方法被调用 --> ");
+        System.err.println("UserService1无参构造方法被调用 --> ");
     }
     
     public void init() {

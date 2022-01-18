@@ -11,11 +11,11 @@ import org.springframework.beans.TypeConverterSupport;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.core.OrderComparator;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.lang.Nullable;
 
@@ -165,7 +165,7 @@ public class BeanFactoryTest {
         // 注册bean
         BeanDefinition rootBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(User.class).getBeanDefinition();
         // rootBeanDefinition.setAutowireCandidate(false);
-        // rootBeanDefinition.setPrimary(true); // 设置bean优先
+        rootBeanDefinition.setPrimary(true); // 设置bean优先
         beanFactory.registerBeanDefinition("user", rootBeanDefinition);
         beanFactory.registerSingleton("user2", new User("zzs002", 19));
         //beanFactory.registerSingleton("user3", new User("zzs003", 18));
@@ -306,6 +306,39 @@ public class BeanFactoryTest {
         
         User user = (User)beanFactory.getBean("user");
         assertNotNull(user);
+    }
+    
+    /**
+     * bean 的属性装配是支持循环依赖的。只是我们需要注意 bean 的 scope 对循环依赖的影响，如下：
+     * <p>已知 userService 和 userDao 相互依赖，且它们均为多例，这时将报错：无法解析的循环依赖。
+     * <p>如果 userService 为单例，userDao 为多例，这时会有两种情况：
+     * <p>如果你先获取的是 userDao，那么会报错
+     * <p>如果你先获取的是 userService，则不会报错；
+     * @author zzs
+     * @date 2022年1月17日 下午11:25:07 void
+     */
+    @Test
+    public void testCircularReference() {
+        // 创建beanFactory
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+
+        // 注册userService
+        AbstractBeanDefinition userServiceBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserService.class).getBeanDefinition();
+        //userServiceBeanDefinition.setScope(ConfigurableBeanFactory.SCOPE_PROTOTYPE);
+        userServiceBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+        beanFactory.registerBeanDefinition("userService", userServiceBeanDefinition);
+        
+        // 注册userDao
+        AbstractBeanDefinition userDaoBeanDefinition = BeanDefinitionBuilder.rootBeanDefinition(UserDao.class).getBeanDefinition();
+        userDaoBeanDefinition.setScope(ConfigurableBeanFactory.SCOPE_PROTOTYPE);
+        userDaoBeanDefinition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+        beanFactory.registerBeanDefinition("userDao", userDaoBeanDefinition);
+
+        // 获取bean
+        UserService userService = (UserService)beanFactory.getBean("userService");
+        assertNotNull(userService.getUserDao());
+        UserDao userDao = (UserDao)beanFactory.getBean("userDao");
+        assertNotNull(userDao.getUserService());
     }
 
 }
